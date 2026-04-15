@@ -9,6 +9,8 @@ A PTY is different from a generic pipe as PTYs implement "line discipline" (whic
 ### Architecture (of this paricular example)
 Though PTYs can be applied to many applications, one of its common use cases is to display and handle the interactions in a shell (command interpreter) such as `sh` or `bash`.
 
+```
+  Userspace
  ┌─────────────────────────────────────────────────────────┐ 
  │ ┌─────────────────────┐           ┌───────────────────┐ │ 
  │ │                     │           │                   │ │ 
@@ -37,6 +39,7 @@ Though PTYs can be applied to many applications, one of its common use cases is 
 │  │                     │          │                    │  │
 │  └─────────────────────┘          └────────────────────┘  │
 └───────────────────────────────────────────────────────────┘
+```
 (Made with: https://asciiflow.com/#/)
 
 ### TODO:
