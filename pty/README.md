@@ -39,8 +39,8 @@ Though PTYs can be applied to many applications, one of its common use cases is 
 │  │                     │          │                    │  │
 │  └─────────────────────┘          └────────────────────┘  │
 └───────────────────────────────────────────────────────────┘
-```
 (Made with: https://asciiflow.com/#/)
+```
 
 ### TODO:
 - [ ] REPL header printing
