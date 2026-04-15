@@ -2,8 +2,9 @@
 
 int main() {
     struct termios original_termios;
+
     // same as: open("/dev/ptmx", O_RDWR);
-    int ptm_fd =  posix_openpt(O_RDWR);// give read write access
+    int ptm_fd = posix_openpt(O_RDWR);// give read write access
 
     int grant_error = grantpt(ptm_fd);
     if (grant_error != 0) {
@@ -25,8 +26,9 @@ int main() {
 
     // Save original terminal settings and set to RAW mode
     tcgetattr(STDIN_FILENO, &original_termios);
-    struct termios raw = original_termios;
+    struct termios raw = original_termios; // define a new termios config to put parent terminal to raw mode
     cfmakeraw(&raw);
+    raw.c_oflag |= OPOST | ONLCR; // TODO: figure out what this is doing...
     tcsetattr(STDIN_FILENO, TCSANOW, &raw);
 
     int pid = fork(); // Fork out child process for execing into shell
@@ -52,7 +54,7 @@ int main() {
             exit(1);
         }
         for (int i = 0; i < 3; i++) {
-            int dup_error = dup2(pts_fd, i);
+            int dup_error = dup2(pts_fd, i); // dup2(oldfd, newfd) => dups newfd and points it to the file description of oldfd
             if (dup_error == -1) {
                 perror("error on fd duping");
                 exit(1);
@@ -61,14 +63,12 @@ int main() {
         close(pts_fd); // close after duping into standard file descriptors
         close(ptm_fd); // not needed in child process 
 
+        // tcsetattr(STDIN_FILENO, TCSANOW, &original_termios);
+
         // Exec into bash script
-        char *command[] = {"/bin/bash", NULL};
+        char *command[] = {"/bin/sh", NULL};
         execvp(command[0], command);
         exit(1);
-        // if (exec_error == -1) {
-        //     perror("error on exec");
-        //     exit(1);
-        // }
     }
 
     // Setup fd_set for select IO multiplexing
@@ -77,8 +77,8 @@ int main() {
     // End session when child dies
     // Pseudo terminal loop
     while (1) {
-        FD_ZERO(&readfds);
-        FD_SET(STDIN_FILENO, &readfds); // apparently this needs to be set every iteration for select?
+        FD_ZERO(&readfds); // Zero out select fd_set (blank slate)
+        FD_SET(STDIN_FILENO, &readfds); // Set fds for every iteration of select
         FD_SET(ptm_fd, &readfds);
 
         // Since we only care about if the child dies, we can disregard status
@@ -92,19 +92,25 @@ int main() {
             return 1;
         }
 
+        // Check if stdin had any input to read from user
         if (FD_ISSET(STDIN_FILENO, &readfds)) {
             // read input and write it into ptm_fd which will be treated as input for pts_fd
-            char c;
+            char c; // NOTE: this can easily be a char buffer to read more characters
             size_t length = read(STDIN_FILENO, &c, sizeof(char));
             size_t write_error = write(ptm_fd, &c, sizeof(char));
             if (write_error == -1) {
                 perror("error on write to ptm");
                 return 1;
             }
+
+            if (c == '\n') {
+                printf("zhupty$ ");
+            }
         }
         
+        // Check if ptm_fd has any input to read (this is technically the output from pts_fd)
         if (FD_ISSET(ptm_fd, &readfds)) {
-            char c;
+            char c; // NOTE: this can easily be a char buffer to read more characters
             size_t length = read(ptm_fd, &c, sizeof(char));
             putchar(c);
         }
