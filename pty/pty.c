@@ -1,9 +1,5 @@
 #include "pty.h"
 
-int fork_command(char *command) {
-    return 0;
-}
-
 int main() {
     struct termios original_termios;
     // same as: open("/dev/ptmx", O_RDWR);
