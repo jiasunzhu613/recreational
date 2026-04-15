@@ -48,4 +48,5 @@ Though PTYs can be applied to many applications, one of its common use cases is 
 
 ### Learing Resources
 General overview of terminals + some history: https://www.linusakesson.net/programming/tty/
+
 Brief on line discipline (post processing done by the kernel?): https://en.wikipedia.org/wiki/Line_discipline
