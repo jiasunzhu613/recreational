@@ -26,29 +26,78 @@ char* trim_whitespace(char *buffer) {
     return p;
 }
 
-// TODO: size is actually unused right now
-fixnum parse_expression(char *buffer, size_t size) {
-    char *p = trim_whitespace(buffer);
+char* parse_fixnum(Object *obj, char *p) {
     fixnum expr = 0;
+    int is_negative = 0;
+
+    if (*p == '-') {
+        is_negative = 1;
+        p++;
+    }
 
     while (*p != '\n') {
         if (!(*p >= '0' && *p <= '9')) {
             perror("Expected digit\n");
             exit(1);
         }
-
         expr *= 10;
         expr += *p - '0';
         p++;
     }
 
-    return expr;
+    if (is_negative) {
+        expr *= -1;
+    }
+
+    obj->value.fixnum = expr;
+    obj->type = OBJECT_FIXNUM;
+
+    return p;
 }
 
-int eval(char *buffer, size_t size) {
+char* parse_boolean(Object *obj, char *p) {
+    p++;
+    boolean expr = false;
+
+    if (*p == 't') {
+        expr = true;
+    } else if (*p != 'f') {
+        perror("Expected #t or #f\n");
+        exit(1);
+    }
+
+    obj->value.boolean = expr;
+    obj->type = OBJECT_BOOLEAN;
+
+    return p++;
+}
+
+// TODO: size is actually unused right now
+Object parse_sexpression(char *buffer) {
+    char *p = trim_whitespace(buffer);
+    Object obj;
+
+    if (*p == '#') {
+        p = parse_boolean(&obj, p);
+    } else if (*p == '-' || (*p >= '0' && *p <= '9')) {
+        p = parse_fixnum(&obj, p);
+    }
+
+    return obj;
+}
+
+int eval(char *buffer) {
     // TODO: need AST parser???
-    fixnum expr = parse_expression(buffer, size);
-    printf("%lld\n", expr);
+    Object obj = parse_sexpression(buffer);
+    
+    switch (obj.type) {
+    case OBJECT_FIXNUM:
+        printf("%lld\n", obj.value.fixnum);
+        break;
+    case OBJECT_BOOLEAN:
+        printf("#%c\n", obj.value.boolean ? 't' : 'f');
+        break;
+    }
 
     return 0;
 }
@@ -68,7 +117,7 @@ int main() {
             return 0;
         }
         
-        int error = eval(buffer, size);
+        int error = eval(buffer);
         if (error) {
             return error;
         }
