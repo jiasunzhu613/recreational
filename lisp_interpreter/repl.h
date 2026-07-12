@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdint.h> // for int64_t et al.
 #include <stdbool.h> // for bool
+#include <assert.h>
 
 typedef int64_t fixnum;
 typedef bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
@@ -36,16 +37,18 @@ struct Object {
     Object_Value value;
 };
 
-// Functions
+// Functions=
 char* trim_whitespace(char *buffer);
 bool is_whitespace(char *buffer);
+bool is_object_list(Object *obj);
 char* parse_fixnum(Object *obj, char *p);
 char* parse_boolean(Object *obj, char *p);
 char* parse_symbol(Object *obj, char *p);
 char* parse_nil(Object *obj, char *p);
 char* parse_pair(Object *obj, char *p);
 char* parse_sexpression(Object *obj, char *buffer);
-void print_sexpression(Object obj);
+void print_list(Object *obj);
+void print_sexpression(Object *obj);
 
 
 #endif // REPL_HEADER

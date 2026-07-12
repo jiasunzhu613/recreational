@@ -23,6 +23,19 @@ bool is_whitespace(char *buffer) {
     return c == ' ' || c == '\n' || c == '\t';
 }
 
+bool is_object_list(Object *obj) {
+    if (obj->type != OBJECT_PAIR) {
+        return false;
+    }
+
+    assert(obj->value.pair[0] != NULL && obj->value.pair[1] != NULL);
+    if (obj->value.pair[0] != NULL && obj->value.pair[1]->type == OBJECT_NIL) {
+        return true;
+    }
+
+    return is_object_list(obj->value.pair[1]);
+}
+
 char* parse_fixnum(Object *obj, char *p) {
     fixnum expr = 0;
     int is_negative = 0;
@@ -69,7 +82,7 @@ char* parse_symbol(Object *obj, char *p) {
     symbol expr = NULL;
 
     size_t length = 0;
-    while (!is_whitespace(p) && *p != ')') {
+    while (!is_whitespace(p) && *p != ')') { // TODO: change
         length++;
         p++;
     }
@@ -105,6 +118,11 @@ char* parse_nil(Object *obj, char *p) {
 
 char* parse_pair(Object *obj, char *p) {
     p++;
+    if (*p == ')') {
+        obj->type = OBJECT_NIL;
+        obj->value.nil = NULL;
+        return ++p;
+    }
 
     obj->type = OBJECT_PAIR;
 
@@ -118,6 +136,7 @@ char* parse_pair(Object *obj, char *p) {
         cdr->value.nil = NULL;
 
         obj->value.pair[1] = cdr;
+        p++;
     } else { // guaranteed to be technically of type PAIR
         Object *cdr = (Object *) calloc(1, sizeof(Object));
         p = parse_pair(cdr, p);
@@ -150,26 +169,46 @@ char* parse_sexpression(Object *obj, char *buffer) {
     return p;
 }
 
-void print_sexpression(Object obj) {
-    switch (obj.type) {
+void print_list(Object *obj) {
+    // Guarantee the object coming in is of list like structure initially
+    // Being OBJECT_PAIR is baseline requirement
+    assert(obj->type == OBJECT_PAIR);
+    
+    while (obj->value.pair[1]->type != OBJECT_NIL) {
+        print_sexpression(obj->value.pair[0]);
+        printf(" ");
+        obj = obj->value.pair[1];
+    }
+    print_sexpression(obj->value.pair[0]);
+}
+
+void print_sexpression(Object *obj) {
+    switch (obj->type) {
     case OBJECT_FIXNUM:
-        printf("%lld", obj.value.fixnum);
+        printf("%lld", obj->value.fixnum);
         break;
     case OBJECT_BOOLEAN:
-        printf("#%c", obj.value.boolean ? 't' : 'f');
+        printf("#%c", obj->value.boolean ? 't' : 'f');
         break;
     case OBJECT_SYMBOL:
-        printf("%s", obj.value.symbol);
+        printf("%s", obj->value.symbol);
         break;
     case OBJECT_NIL:
         printf("nil");
         break;
     case OBJECT_PAIR:
-        printf("(");
-        print_sexpression(*(obj.value.pair[0]));
-        printf(" . ");
-        print_sexpression(*(obj.value.pair[1]));
-        printf(")");
+        // Check if pair construction looks like list construction
+        if (is_object_list(obj)) {
+            printf("(");
+            print_list(obj);
+            printf(")");
+        }
+        // TODO: put this back to support actual pairs later
+        // printf("(");
+        // print_sexpression(obj->value.pair[0]);
+        // printf(" . ");
+        // print_sexpression(obj->value.pair[1]);
+        // printf(")");
         break;
     }
 }
@@ -180,7 +219,7 @@ int eval(char *buffer) {
 
     buffer = parse_sexpression(&obj, buffer);
     
-    print_sexpression(obj);
+    print_sexpression(&obj);
     printf("\n");
 
     return 0;
