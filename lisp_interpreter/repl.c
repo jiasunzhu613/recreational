@@ -1,8 +1,11 @@
 /* 
 Read, Evaluate, Print Loop for interpreting LISP
 
+DISCLAIMER: this may not be an exact one to one replication of any specific well-known LISP dialect
+
 Recreational programming session referencing:
 - https://groups.csail.mit.edu/mac/classes/6.001/abelson-sussman-lectures/
+- https://bernsteinbear.com/blog/lisp/
 */
 
 #include "repl.h"
@@ -29,7 +32,6 @@ char* parse_fixnum(Object *obj, char *p) {
         p++;
     }
 
-    // printf("DEBUG: remaining => %s\n", p);
     while (*p >= '0' && *p <= '9') {
         expr *= 10;
         expr += *p - '0';
@@ -43,7 +45,6 @@ char* parse_fixnum(Object *obj, char *p) {
     obj->value.fixnum = expr;
     obj->type = OBJECT_FIXNUM;
 
-    // printf("DEBUG: remaining => %s\n", p);
     return p;
 }
 
@@ -165,14 +166,12 @@ void print_sexpression(Object obj) {
         break;
     case OBJECT_PAIR:
         printf("(");
-        // printf("DEBUG: mem address of car during print: %p\n", obj.value.pair[0]);
         print_sexpression(*(obj.value.pair[0]));
         printf(" . ");
         print_sexpression(*(obj.value.pair[1]));
         printf(")");
         break;
     }
-
 }
 
 int eval(char *buffer) {
