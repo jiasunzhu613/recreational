@@ -155,7 +155,6 @@ char* parse_boolean(Object *obj, char *p) {
 }
 
 char* parse_symbol(Object *obj, char *p) {
-    p++; // increment for ' delimiter
     symbol expr = NULL;
 
     size_t length = 0;
@@ -164,31 +163,16 @@ char* parse_symbol(Object *obj, char *p) {
         p++;
     }
 
-    // TODO: if we need this, we need to figure out how to deallocate this memory
-    // maybe runtime GC is enough?
     expr = (symbol) malloc(length);
     memcpy(expr, p - length, length); // because we ++ at the end of the while loop too
-    
-    obj->value.symbol = expr;
-    obj->type = OBJECT_SYMBOL;
 
-    return p;
-}
-
-char* parse_nil(Object *obj, char *p) {
-    p++;
-    if (*p++ != 'i') {
-        fprintf(stderr, "Expected: nil\n");
-        exit(1);
+    if (length == 3 && strcmp(expr, NIL) == 0) { // special case: nil
+        obj->value.nil = NULL;
+        obj->type = OBJECT_NIL;
+    } else {        
+        obj->value.symbol = expr;
+        obj->type = OBJECT_SYMBOL;
     }
-
-    if (*p++ != 'l') {
-        fprintf(stderr, "Expected: nil\n");
-        exit(1);
-    }
-
-    obj->value.nil = NULL;
-    obj->type = OBJECT_NIL;
 
     return p;
 }
@@ -228,19 +212,17 @@ char* parse_pair(Object *obj, char *p) {
 char* parse_sexpression(Object *obj, char *buffer) {
     char *p = trim_whitespace(buffer);
 
+    // else if (*p == '\'') {
+    //     p = parse_symbol(obj, p);
+    // } 
     if (*p == '#') {
         p = parse_boolean(obj, p);
     } else if (*p == '-' || (*p >= '0' && *p <= '9')) {
         p = parse_fixnum(obj, p);
-    } else if (*p == '\'') {
-        p = parse_symbol(obj, p);
-    } else if (*p == 'n') {
-        p = parse_nil(obj, p);
     } else if (*p == '(') { // TODO: handle explicit pair construction
         p = parse_pair(obj, p);
     } else {
-        fprintf(stderr, "Got unknown symbols: %s", buffer);
-        exit(1);
+        p = parse_symbol(obj, p); // we will have nil as a special case in parsing a symbol
     }
 
     return p;

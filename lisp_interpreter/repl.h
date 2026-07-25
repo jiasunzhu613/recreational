@@ -8,6 +8,7 @@
 #include <stdbool.h> // for bool
 #include <assert.h>
 
+#define NIL "nil"
 #define BUILTIN_VAL "val" // e.g. (val x 7) => assigns x to 7
 #define BUILTIN_IF "if" // e.g. (if condition action-for-true action-for-false)
 #define BUILTIN_ADD "+" // e.g. (+ 6 7)
@@ -67,7 +68,6 @@ Object* list_index_get(Object *list, int ind);
 char* parse_fixnum(Object *obj, char *p);
 char* parse_boolean(Object *obj, char *p);
 char* parse_symbol(Object *obj, char *p);
-char* parse_nil(Object *obj, char *p);
 char* parse_pair(Object *obj, char *p);
 char* parse_sexpression(Object *obj, char *buffer);
 void print_list(Object *obj);
