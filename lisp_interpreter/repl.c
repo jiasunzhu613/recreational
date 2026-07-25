@@ -10,6 +10,56 @@ Recreational programming session referencing:
 
 #include "repl.h"
 
+bool env_put(Object **env, Object *key, Object *value) {
+    // always pair up
+    Object *entry = (Object*) calloc(1, sizeof(Object));
+    entry->type = OBJECT_PAIR;
+    entry->value.pair[0] = key;
+    entry->value.pair[1] = value;
+
+    Object *new_env = (Object*) calloc(1, sizeof(Object));
+    new_env->type = OBJECT_PAIR;
+    new_env->value.pair[0] = entry;
+    new_env->value.pair[1] = *env;
+
+    print_sexpression(new_env);
+
+    *env = new_env;
+    return true;
+}
+
+Object* env_search(Object **env, Object *key) {
+    // TODO: need some way to compare the value of key which will be a symbol and what is in the env, compare strings, strcmp
+    // key should never be a non-symbol
+    assert(key->type == OBJECT_SYMBOL); // TODO: maybe mark with better logging instead
+
+    Object *p = *env;
+
+    while (p->type != OBJECT_NIL) {
+        Object *entry = p->value.pair[0]; // TODO: might need to validate this, this should be a entry though
+        Object *entry_key = entry->value.pair[0]; // get first elem from entry pair
+        printf("DEBUG: on entry\n");
+        print_sexpression(entry);
+        printf("\n");
+        if (entry_key->type != OBJECT_SYMBOL) {
+            fprintf(stderr, "CRITICAL: environment entry has non-symbol key\n");
+            exit(1);
+        }
+
+        if (strcmp(entry_key->value.symbol, key->value.symbol) == 0) {
+            printf("DEBUG: FOUND MATCHING KEYS\n");
+            printf("DEBUG: RETURING ");
+            print_sexpression(entry->value.pair[1]);
+            printf("\n");
+            return entry->value.pair[1];
+        }
+
+        p = p->value.pair[1];
+    }
+
+    printf("DEBUG: DID NOT FIND SHIT IN ENV_SEARCH\n");
+    return NULL; // TODO: decide what to do here?
+}
 
 char* trim_whitespace(char *buffer) {
     char *p = buffer;
@@ -34,6 +84,16 @@ bool is_object_list(Object *obj) {
     }
 
     return is_object_list(obj->value.pair[1]);
+}
+
+int list_len(Object *obj) {
+    int count = 0;
+    while (obj->value.pair[1]->type != OBJECT_NIL) {
+        count++;
+        obj = obj->value.pair[1];
+    }
+
+    return count + 1;
 }
 
 char* parse_fixnum(Object *obj, char *p) {
@@ -183,6 +243,10 @@ void print_list(Object *obj) {
 }
 
 void print_sexpression(Object *obj) {
+    if (obj == NULL) {
+        return;
+    }
+
     switch (obj->type) {
     case OBJECT_FIXNUM:
         printf("%lld", obj->value.fixnum);
@@ -202,52 +266,91 @@ void print_sexpression(Object *obj) {
             printf("(");
             print_list(obj);
             printf(")");
+        } else { // Print in pair syntax instead
+             printf("(");
+            print_sexpression(obj->value.pair[0]);
+            printf(" . ");
+            print_sexpression(obj->value.pair[1]);
+            printf(")");
         }
-        // TODO: put this back to support actual pairs later
-        // printf("(");
-        // print_sexpression(obj->value.pair[0]);
-        // printf(" . ");
-        // print_sexpression(obj->value.pair[1]);
-        // printf(")");
+    
         break;
     }
 }
 
-int eval(char *buffer) {
+// NOTE: we guarantee that the Object coming in is of list type
+// TODO: maybe change this to loop through enums and then return an enum as well?
+bool is_built_in(Object *obj, char *func_name) {
+    if (!(obj->value.pair[0]->type == OBJECT_SYMBOL)) {
+        return false;
+    }
+
+    return strcmp(obj->value.pair[0]->value.symbol, func_name) == 0;
+}
+
+Object* builtin_val(Object *list, Object **env) {
+    if (list_len(list) != 3) {
+        return NULL; // TODO: decide if this return value is good or not
+    }
+
+    Object *env_key = list->value.pair[1]->value.pair[0];
+    Object *env_value = list->value.pair[1]->value.pair[1]->value.pair[0];
+
+    // Make sure env_key is a symbol
+    if (env_key->type != OBJECT_SYMBOL) {
+        return NULL;
+    }
+
+    bool success = env_put(env, env_key, env_value);
+    printf("DEBUG: env_put in builtinval => %d\n", success);
+    return NULL;
+}
+
+Object* eval_sexpression(Object *obj, Object **env) {
+    /*
+    Evaluate based on type
+
+    Some types are directly self-resolving (meaning we know exactly what we 
+    need to do with them without any processing)
+
+    Some other types like lists, we need to do additional parsing on top to know whether we need to
+    evaluate a built-in function, a lambda, or simply just print out a list.
+    */
+
+    switch (obj->type) {
+    case OBJECT_FIXNUM: // fallthrough
+    case OBJECT_BOOLEAN: // fallthrough
+    case OBJECT_NIL:
+        return obj;
+    case OBJECT_SYMBOL: // symbol search
+        Object *res = env_search(env, obj);
+        return res; // TODO: tbf i dont think this behaviour is good
+    case OBJECT_PAIR:
+        // Actual case where the OBJECT_PAIR really is a pair => just print "car" and "cdr"
+        if (!is_object_list(obj)) {
+            return obj;
+        }
+
+        if (is_built_in(obj, BUILTIN_VAL)) { // symbol put
+            return builtin_val(obj, env);
+        } else {
+            return obj; // just return list object for printing
+        }
+    }
+
+    return NULL;
+}
+
+int eval(char *buffer, Object **env) {
     // TODO: need AST parser???
     Object obj = {};
 
-    buffer = parse_sexpression(&obj, buffer);
+    buffer = parse_sexpression(&obj, buffer); // parse object from buffer
     
-    print_sexpression(&obj);
+    Object *eval_obj = eval_sexpression(&obj, env); // evaluate object
+
+    print_sexpression(eval_obj); // print object
     printf("\n");
 
-    return 0;
-}
-
-// TODO: right now there are for sure memory leaks because we dont free mallocs for list and symbol 
-int main() {
-    char *buffer = NULL;
-    size_t size = 0;
-
-    while (1) {
-        printf(">>> "); // Print prompt
-
-        ssize_t num_chars = getline(&buffer, &size, stdin);
-
-        // Exit on ^D or EOF
-        if (num_chars == -1) {
-            printf("\n");
-            return 0;
-        }
-        
-        int error = eval(buffer);
-        if (error) {
-            return error;
-        }
-        // Make sure to free heap memory allocated for buffer
-        free(buffer);
-        buffer = NULL;
-    }
     return 0;
 }
