@@ -9,7 +9,7 @@
 #include <assert.h>
 
 #define BUILTIN_VAL "val" // e.g. (val x 7) => assigns x to 7
-#define BUILTIN_IF "if"
+#define BUILTIN_IF "if" // e.g. (if condition action-for-true action-for-false)
 
 typedef int64_t fixnum;
 typedef bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
@@ -46,6 +46,7 @@ Object* env_search(Object **env, Object *key); // returns Object* which represen
 
 // Builtin Lisp Functions
 Object* builtin_val(Object *list, Object **env);
+Object* builtin_if(Object *list, Object **env);
 
 // Functions
 char* trim_whitespace(char *buffer);

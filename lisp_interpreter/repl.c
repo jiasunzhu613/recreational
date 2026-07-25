@@ -306,6 +306,27 @@ Object* builtin_val(Object *list, Object **env) {
     return NULL;
 }
 
+Object* builtin_if(Object *list, Object **env) {
+    if (list_len(list) != 4) {
+        return NULL; // TODO: decide if this return value is good or not
+    }
+
+    Object *condition = list->value.pair[1]->value.pair[0];
+    Object *action_true = list->value.pair[1]->value.pair[1]->value.pair[0];
+    Object *action_false = list->value.pair[1]->value.pair[1]->value.pair[1]->value.pair[0];
+
+    Object *evaluated = eval_sexpression(condition, env);
+    if (evaluated->type != OBJECT_BOOLEAN) {
+        return NULL; // TODO: this should emit an error
+    }
+
+    if (condition->value.boolean) {
+        return action_true;
+    } else {
+        return action_false;
+    }
+}
+
 Object* eval_sexpression(Object *obj, Object **env) {
     /*
     Evaluate based on type
@@ -333,6 +354,8 @@ Object* eval_sexpression(Object *obj, Object **env) {
 
         if (is_built_in(obj, BUILTIN_VAL)) { // symbol put
             return builtin_val(obj, env);
+        } else if (is_built_in(obj, BUILTIN_IF)) { // if
+            return builtin_if(obj, env); 
         } else {
             return obj; // just return list object for printing
         }
