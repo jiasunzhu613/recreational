@@ -10,6 +10,9 @@
 
 #define BUILTIN_VAL "val" // e.g. (val x 7) => assigns x to 7
 #define BUILTIN_IF "if" // e.g. (if condition action-for-true action-for-false)
+#define BUILTIN_ADD "+" // e.g. (+ 6 7)
+#define BUILTIN_SUB_NEG "-" // e.g. (- 6) or (- 7 6)
+#define BUILTIN_MUL "*" // e.g. (* 6 7)
 
 typedef int64_t fixnum;
 typedef bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
@@ -47,12 +50,20 @@ Object* env_search(Object **env, Object *key); // returns Object* which represen
 // Builtin Lisp Functions
 Object* builtin_val(Object *list, Object **env);
 Object* builtin_if(Object *list, Object **env);
+Object* builtin_add(Object *list, Object **env);
+Object* builtin_sub_neg(Object *list, Object **env); // if 1 argument, return negation, else, subtract values in sequence
+Object* builtin_mul(Object *list, Object **env);
+// Object* builtin_div(Object *list, Object **env);
+
 
 // Functions
 char* trim_whitespace(char *buffer);
 bool is_whitespace(char *buffer);
 bool is_object_list(Object *obj);
-int list_len(Object *obj);
+int list_len(Object *list);
+Object* list_index(Object *list, int ind);
+Object* list_index_get(Object *list, int ind);
+
 char* parse_fixnum(Object *obj, char *p);
 char* parse_boolean(Object *obj, char *p);
 char* parse_symbol(Object *obj, char *p);

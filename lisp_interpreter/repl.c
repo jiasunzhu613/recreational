@@ -86,14 +86,31 @@ bool is_object_list(Object *obj) {
     return is_object_list(obj->value.pair[1]);
 }
 
-int list_len(Object *obj) {
+int list_len(Object *list) {
     int count = 0;
-    while (obj->value.pair[1]->type != OBJECT_NIL) {
+    while (list->value.pair[1]->type != OBJECT_NIL) {
         count++;
-        obj = obj->value.pair[1];
+        list = list->value.pair[1];
     }
 
     return count + 1;
+}
+
+Object* list_index(Object *list, int ind) {
+    while (ind > 0 && list->type != OBJECT_NIL) {
+        ind--;
+        list = list->value.pair[1];
+    }
+
+    if (ind > 0) {
+        return NULL;
+    }
+
+    return list;
+}
+
+Object* list_index_get(Object *list, int ind) {
+    return list_index(list, ind)->value.pair[0];
 }
 
 char* parse_fixnum(Object *obj, char *p) {
@@ -243,6 +260,7 @@ void print_list(Object *obj) {
 }
 
 void print_sexpression(Object *obj) {
+    // TODO: this should change
     if (obj == NULL) {
         return;
     }
@@ -293,8 +311,8 @@ Object* builtin_val(Object *list, Object **env) {
         return NULL; // TODO: decide if this return value is good or not
     }
 
-    Object *env_key = list->value.pair[1]->value.pair[0];
-    Object *env_value = list->value.pair[1]->value.pair[1]->value.pair[0];
+    Object *env_key = list_index_get(list, 1);
+    Object *env_value = list_index_get(list, 2);
 
     // Make sure env_key is a symbol
     if (env_key->type != OBJECT_SYMBOL) {
@@ -311,9 +329,9 @@ Object* builtin_if(Object *list, Object **env) {
         return NULL; // TODO: decide if this return value is good or not
     }
 
-    Object *condition = list->value.pair[1]->value.pair[0];
-    Object *action_true = list->value.pair[1]->value.pair[1]->value.pair[0];
-    Object *action_false = list->value.pair[1]->value.pair[1]->value.pair[1]->value.pair[0];
+    Object *condition = list_index_get(list, 1);
+    Object *action_true = list_index_get(list, 2);
+    Object *action_false = list_index_get(list, 3);
 
     Object *evaluated = eval_sexpression(condition, env);
     if (evaluated->type != OBJECT_BOOLEAN) {
@@ -326,6 +344,146 @@ Object* builtin_if(Object *list, Object **env) {
         return action_false;
     }
 }
+
+Object* builtin_add(Object *list, Object **env) {
+    if (list_len(list) < 3) {
+        return NULL;
+    }
+
+    fixnum res = 0;
+    Object *elements = list_index(list, 1);
+    while (elements->type == OBJECT_PAIR) {
+        Object *evaluated = eval_sexpression(elements->value.pair[0], env);
+        if (evaluated->type != OBJECT_FIXNUM) {
+            return NULL;
+        }
+
+        res += evaluated->value.fixnum;
+        elements = elements->value.pair[1];
+    }
+
+    Object *result = (Object*)calloc(1, sizeof(Object));
+    result->type = OBJECT_FIXNUM;
+    result->value.fixnum = res;
+
+    return result;
+}
+
+Object* builtin_sub_neg(Object *list, Object **env) {
+    int len = list_len(list);
+    if (len < 2) {
+        return NULL;
+    }
+
+    if (len == 2) {
+        Object *elem = list_index_get(list, 1);
+        Object *evaluated = eval_sexpression(elem, env);
+        if (evaluated->type != OBJECT_FIXNUM) {
+            return NULL;
+        }
+
+        fixnum res = evaluated->value.fixnum * -1;
+        Object *result = (Object*)calloc(1, sizeof(Object));
+        result->type = OBJECT_FIXNUM;
+        result->value.fixnum = res;
+
+        return result;
+    }
+
+    Object *elem = list_index_get(list, 1);
+    Object *evaluated_elem = eval_sexpression(elem, env);
+    if (evaluated_elem->type != OBJECT_FIXNUM) {
+        return NULL;
+    }
+    fixnum res = evaluated_elem->value.fixnum;
+    
+    Object *elements = list_index(list, 2);
+    while (elements->type == OBJECT_PAIR) {
+        Object *evaluated = eval_sexpression(elements->value.pair[0], env);
+        if (evaluated->type != OBJECT_FIXNUM) {
+            return NULL;
+        }
+
+        res -= evaluated->value.fixnum;
+        elements = elements->value.pair[1];
+    }
+
+    Object *result = (Object*)calloc(1, sizeof(Object));
+    result->type = OBJECT_FIXNUM;
+    result->value.fixnum = res;
+
+    return result;
+}
+
+Object* builtin_mul(Object *list, Object **env) {
+    if (list_len(list) < 3) {
+        return NULL;
+    }
+
+    fixnum res = 1;
+    Object *elements = list_index(list, 1);
+    while (elements->type == OBJECT_PAIR) {
+        Object *evaluated = eval_sexpression(elements->value.pair[0], env);
+        if (evaluated->type != OBJECT_FIXNUM) {
+            return NULL;
+        }
+
+        res *= evaluated->value.fixnum;
+        elements = elements->value.pair[1];
+    }
+
+    Object *result = (Object*)calloc(1, sizeof(Object));
+    result->type = OBJECT_FIXNUM;
+    result->value.fixnum = res;
+
+    return result;
+}
+
+// Object* builtin_div(Object *list, Object **env) {
+//     int len = list_len(list);
+//     if (len < 2) {
+//         return NULL;
+//     }
+
+//     if (len == 2) {
+//         Object *elem = list_index_get(list, 1);
+//         Object *evaluated = eval_sexpression(elem, env);
+//         if (evaluated->type != OBJECT_FIXNUM) {
+//             return NULL;
+//         }
+
+//         fixnum res = evaluated->value.fixnum;
+//         Object *result = (Object*)calloc(1, sizeof(Object));
+//         result->type = OBJECT_FIXNUM;
+//         result->value.fixnum = res;
+
+//         return result;
+//     }
+
+//     Object *elem = list_index_get(list, 1);
+//     Object *evaluated_elem = eval_sexpression(elem, env);
+//     if (evaluated_elem->type != OBJECT_FIXNUM) {
+//         return NULL;
+//     }
+//     fixnum res = evaluated_elem->value.fixnum;
+    
+//     Object *elements = list_index(list, 2);
+//     while (elements->type == OBJECT_PAIR) {
+//         Object *evaluated = eval_sexpression(elements->value.pair[0], env);
+//         if (evaluated->type != OBJECT_FIXNUM) {
+//             return NULL;
+//         }
+
+//         res -= evaluated->value.fixnum;
+//         elements = elements->value.pair[1];
+//     }
+
+//     Object *result = (Object*)calloc(1, sizeof(Object));
+//     result->type = OBJECT_FIXNUM;
+//     result->value.fixnum = res;
+
+//     return result;
+// }
 
 Object* eval_sexpression(Object *obj, Object **env) {
     /*
@@ -356,6 +514,12 @@ Object* eval_sexpression(Object *obj, Object **env) {
             return builtin_val(obj, env);
         } else if (is_built_in(obj, BUILTIN_IF)) { // if
             return builtin_if(obj, env); 
+        } else if (is_built_in(obj, BUILTIN_ADD)) { // add
+            return builtin_add(obj, env); 
+        } else if (is_built_in(obj, BUILTIN_SUB_NEG)) { // add
+            return builtin_sub_neg(obj, env); 
+        } else if (is_built_in(obj, BUILTIN_MUL)) { // add
+            return builtin_mul(obj, env); 
         } else {
             return obj; // just return list object for printing
         }

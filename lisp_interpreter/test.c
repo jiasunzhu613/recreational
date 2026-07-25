@@ -26,6 +26,12 @@ int main() {
     buffer = parse_sexpression(&obj, buffer);
     print_sexpression(&obj);
 
+    Object *indexed = list_index(&obj, 10);
+    if (indexed == NULL) {
+        printf("indexed too far\n");
+    }
+    print_sexpression(indexed);
+
     printf("Received list length: %d\n", list_len(&obj));
 
     return 0;
