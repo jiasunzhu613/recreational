@@ -11,7 +11,7 @@ Recreational programming session referencing:
 #include "repl.h"
 
 Function *builtin[] = {
-    &(Function){.name="if", .func=builtin_if},
+    &(Function){.name="if", .func=builtin_if}, // NOTE: {} syntax provides the data, but we still need to cast to Function type!
     &(Function){.name="+", .func=builtin_add},
     &(Function){.name="-", .func=builtin_sub_neg},
     &(Function){.name="*", .func=builtin_mul},
