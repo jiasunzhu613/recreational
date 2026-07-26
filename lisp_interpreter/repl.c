@@ -15,12 +15,10 @@ Function *builtin[] = {
     &(Function){.name="+", .func=builtin_add},
     &(Function){.name="-", .func=builtin_sub_neg},
     &(Function){.name="*", .func=builtin_mul},
-    &(Function){.name="quote", .func=builtin_quote}, // TODO: special, maybe dont need to put here
     &(Function){.name="atom", .func=builtin_atom},
     &(Function){.name="cdr", .func=builtin_cdr},
     &(Function){.name="car", .func=builtin_car},
     &(Function){.name="cons", .func=builtin_cons},
-    &(Function){.name="cond", .func=builtin_cond}, // TODO: special, maybe dont need to put here
     NULL
 };
 
@@ -449,7 +447,21 @@ Object* builtin_quote(Object *list) {
 }
 
 Object* builtin_atom(Object *list){
-    return NULL;  
+     if (list_len(list) != 1) {
+        return NULL;
+    }
+    
+    Object *inner_elem = list_index_get(list, 0);
+    Object *ret = (Object*)calloc(1, sizeof(Object));
+    ret->type = OBJECT_BOOLEAN;
+    
+    if (is_object_list(inner_elem)) {
+        ret->value.boolean = false;
+    } else {
+        ret->value.boolean = true;
+    }
+
+    return ret;
 }
 
 Object* builtin_eq(Object *list){
@@ -457,19 +469,72 @@ Object* builtin_eq(Object *list){
 }
 
 Object* builtin_cdr(Object *list){
-    return NULL;  
+    if (list_len(list) != 1) {
+        return NULL;
+    }
+    
+    Object *inner_list = list_index_get(list, 0);
+    if (inner_list->type != OBJECT_PAIR) {
+        return NULL;
+    }
+
+    return list_index_get(inner_list, 0);
 }
 
 Object* builtin_car(Object *list){
-    return NULL;  
+    if (list_len(list) != 1) {
+        return NULL;
+    }  
+
+    Object *inner_list = list_index_get(list, 0);
+    if (inner_list->type != OBJECT_PAIR) {
+        return NULL;
+    }
+
+    return list_index(inner_list, 1);
 }
 
 Object* builtin_cons(Object *list){
-    return NULL;  
+    if (list_len(list) != 2) {
+        return NULL;
+    }  
+
+    Object *obj = (Object*)calloc(1, sizeof(Object));
+    obj->type = OBJECT_PAIR;
+    obj->value.pair[0] = list_index_get(list, 0);
+    obj->value.pair[1] = list_index_get(list, 1);
+
+    return obj;
 }
 
-Object* builtin_cond(Object *list){
-    return NULL;  
+Object* builtin_cond(Object *list, Object **env){
+    if (list_len(list) < 1) {
+        return NULL;
+    }  
+
+    Object *pairs = list;
+    while (pairs->type == OBJECT_PAIR) {
+        Object *pair = pairs->value.pair[0];
+        if (!is_object_list(pair)) {
+            return NULL;
+        }
+        if (list_len(pair) != 2) {
+            return NULL;
+        }
+
+        Object *condition = eval_sexpression(list_index_get(pair, 0), env);
+        if (condition->type != OBJECT_BOOLEAN) {
+            return NULL;
+        }
+
+        if (condition->value.boolean) {
+            return eval_sexpression(list_index_get(pair, 1), env);;
+        }
+
+        pairs = pairs->value.pair[1];
+    }
+
+    return NULL; // no condition matched
 }
 
 // We guarantee that objects coming in are in cons list format
@@ -480,7 +545,6 @@ Object* eval_all(Object *obj, Object **env) {
         p = p->value.pair[1];
     }
 
-    print_sexpression(obj);
     return obj;
 }
 
@@ -526,7 +590,7 @@ Object* eval_sexpression(Object *obj, Object **env) {
         } else if (is_built_in(first, "quote")) {
             return builtin_quote(list_index(obj, 1));
         } else if (is_built_in(first, "cond")) {
-            return builtin_cond(list_index(obj, 1)); // TODO
+            return builtin_cond(list_index(obj, 1), env); // TODO
         }
         // Generic functions: pre-evaluate all arguments
         return apply_func(first->value.symbol, eval_all(list_index(obj, 1), env));

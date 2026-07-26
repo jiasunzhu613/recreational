@@ -19,7 +19,7 @@ typedef enum Object_Type Object_Type;
 typedef struct Object Object;
 typedef struct Function Function;
 
-enum Object_Type {
+enum Object_Type { // TODO: add double and string?
     OBJECT_NIL,
     OBJECT_FIXNUM,
     OBJECT_BOOLEAN,
@@ -67,7 +67,7 @@ Object* builtin_eq(Object *list); // (eq a b) => compares if atoms are equivalen
 Object* builtin_cdr(Object *list); // (cdr list) => returns left side of a cons cell
 Object* builtin_car(Object *list); // (car list) => returns remaining pair of list
 Object* builtin_cons(Object *list); // (cons a b) => constructs cons cell from two elements
-Object* builtin_cond(Object *list); // (cond (condition1 action1) (condition2 action2) ...)
+Object* builtin_cond(Object *list, Object **env); // (cond (condition1 action1) (condition2 action2) ...)
 
 // Functions
 char* trim_whitespace(char *buffer);
