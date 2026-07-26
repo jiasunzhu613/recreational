@@ -9,11 +9,7 @@
 #include <assert.h>
 
 #define NIL "nil"
-#define BUILTIN_VAL "val" // e.g. (val x 7) => assigns x to 7
-#define BUILTIN_IF "if" // e.g. (if condition action-for-true action-for-false)
-#define BUILTIN_ADD "+" // e.g. (+ 6 7)
-#define BUILTIN_SUB_NEG "-" // e.g. (- 6) or (- 7 6)
-#define BUILTIN_MUL "*" // e.g. (* 6 7)
+#define VAL "val"
 
 typedef int64_t fixnum;
 typedef bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
@@ -22,6 +18,7 @@ typedef char* symbol;
 typedef union Object_Value Object_Value;
 typedef enum Object_Type Object_Type;
 typedef struct Object Object;
+typedef struct Function Function;
 
 enum Object_Type {
     OBJECT_NIL,
@@ -42,20 +39,36 @@ union Object_Value {
 struct Object {
     Object_Type type;
     Object_Value value;
+    // TODO: add a "quoted" field to distinguish from normal field?
 };
+
+struct Function {
+    symbol name;
+    Object* (*func)(Object*);
+};
+
+
+// TODO: define list of available functions
 
 // Environment
 bool env_put(Object **env, Object *key, Object *value); // then we must create entry out of key and value
 Object* env_search(Object **env, Object *key); // returns Object* which represents the value in env
 
 // Builtin Lisp Functions
+// TODO: add a function mapping?
 Object* builtin_val(Object *list, Object **env);
-Object* builtin_if(Object *list, Object **env);
-Object* builtin_add(Object *list, Object **env);
-Object* builtin_sub_neg(Object *list, Object **env); // if 1 argument, return negation, else, subtract values in sequence
-Object* builtin_mul(Object *list, Object **env);
-// Object* builtin_div(Object *list, Object **env);
+Object* builtin_if(Object *list);
+Object* builtin_add(Object *list);
+Object* builtin_sub_neg(Object *list); // if 1 argument, return negation, else, subtract values in sequence
+Object* builtin_mul(Object *list);
 
+Object* builtin_quote(Object *list); // (quote (a b c)) or '(a b c)
+Object* builtin_atom(Object *list); // (atom x)
+Object* builtin_eq(Object *list); // (eq a b) => compares if atoms are equivalent or if memory addresses are the same
+Object* builtin_cdr(Object *list); // (cdr list) => returns left side of a cons cell
+Object* builtin_car(Object *list); // (car list) => returns remaining pair of list
+Object* builtin_cons(Object *list); // (cons a b) => constructs cons cell from two elements
+Object* builtin_cond(Object *list); // (cond (condition1 action1) (condition2 action2) ...)
 
 // Functions
 char* trim_whitespace(char *buffer);
@@ -73,7 +86,9 @@ char* parse_sexpression(Object *obj, char *buffer);
 void print_list(Object *obj);
 void print_sexpression(Object *obj);
 bool is_built_in(Object *obj, char *func_name); // TODO: need to verify type of first element in list first
+Object* eval_all(Object *obj, Object **env);
 Object* eval_sexpression(Object *obj, Object **env); // evaluate sexpression list
+Object* apply_func(symbol func_name, Object *args);
 
 int eval(char *buffer, Object **env); // main evaluation entrypoint
 

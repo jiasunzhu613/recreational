@@ -10,6 +10,20 @@ Recreational programming session referencing:
 
 #include "repl.h"
 
+Function *builtin[] = {
+    &(Function){.name="if", .func=builtin_if},
+    &(Function){.name="+", .func=builtin_add},
+    &(Function){.name="-", .func=builtin_sub_neg},
+    &(Function){.name="*", .func=builtin_mul},
+    &(Function){.name="quote", .func=builtin_quote}, // TODO: special, maybe dont need to put here
+    &(Function){.name="atom", .func=builtin_atom},
+    &(Function){.name="cdr", .func=builtin_cdr},
+    &(Function){.name="car", .func=builtin_car},
+    &(Function){.name="cons", .func=builtin_cons},
+    &(Function){.name="cond", .func=builtin_cond}, // TODO: special, maybe dont need to put here
+    NULL
+};
+
 bool env_put(Object **env, Object *key, Object *value) {
     // always pair up
     Object *entry = (Object*) calloc(1, sizeof(Object));
@@ -289,12 +303,12 @@ bool is_built_in(Object *obj, char *func_name) {
 }
 
 Object* builtin_val(Object *list, Object **env) {
-    if (list_len(list) != 3) {
+    if (list_len(list) != 2) {
         return NULL; // TODO: decide if this return value is good or not
     }
 
-    Object *env_key = list_index_get(list, 1);
-    Object *env_value = list_index_get(list, 2);
+    Object *env_key = list_index_get(list, 0);
+    Object *env_value = eval_sexpression(list_index_get(list, 1), env);
 
     // Make sure env_key is a symbol
     if (env_key->type != OBJECT_SYMBOL) {
@@ -306,17 +320,16 @@ Object* builtin_val(Object *list, Object **env) {
     return NULL;
 }
 
-Object* builtin_if(Object *list, Object **env) {
-    if (list_len(list) != 4) {
+Object* builtin_if(Object *list) {
+    if (list_len(list) != 3) {
         return NULL; // TODO: decide if this return value is good or not
     }
 
-    Object *condition = list_index_get(list, 1);
-    Object *action_true = list_index_get(list, 2);
-    Object *action_false = list_index_get(list, 3);
+    Object *condition = list_index_get(list, 0);
+    Object *action_true = list_index_get(list, 1);
+    Object *action_false = list_index_get(list, 2);
 
-    Object *evaluated = eval_sexpression(condition, env);
-    if (evaluated->type != OBJECT_BOOLEAN) {
+    if (condition->type != OBJECT_BOOLEAN) {
         return NULL; // TODO: this should emit an error
     }
 
@@ -327,20 +340,21 @@ Object* builtin_if(Object *list, Object **env) {
     }
 }
 
-Object* builtin_add(Object *list, Object **env) {
-    if (list_len(list) < 3) {
+Object* builtin_add(Object *list) {
+    if (list_len(list) < 2) {
         return NULL;
     }
 
     fixnum res = 0;
-    Object *elements = list_index(list, 1);
+    Object *elements = list;
+    print_sexpression(list);
     while (elements->type == OBJECT_PAIR) {
-        Object *evaluated = eval_sexpression(elements->value.pair[0], env);
-        if (evaluated->type != OBJECT_FIXNUM) {
+        Object *element = elements->value.pair[0];
+        if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
-        res += evaluated->value.fixnum;
+        res += element->value.fixnum;
         elements = elements->value.pair[1];
     }
 
@@ -351,20 +365,19 @@ Object* builtin_add(Object *list, Object **env) {
     return result;
 }
 
-Object* builtin_sub_neg(Object *list, Object **env) {
+Object* builtin_sub_neg(Object *list) {
     int len = list_len(list);
-    if (len < 2) {
+    if (len < 1) {
         return NULL;
     }
 
-    if (len == 2) {
-        Object *elem = list_index_get(list, 1);
-        Object *evaluated = eval_sexpression(elem, env);
-        if (evaluated->type != OBJECT_FIXNUM) {
+    if (len == 1) {
+        Object *elem = list_index_get(list, 0);
+        if (elem->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
-        fixnum res = evaluated->value.fixnum * -1;
+        fixnum res = elem->value.fixnum * -1;
         Object *result = (Object*)calloc(1, sizeof(Object));
         result->type = OBJECT_FIXNUM;
         result->value.fixnum = res;
@@ -372,21 +385,20 @@ Object* builtin_sub_neg(Object *list, Object **env) {
         return result;
     }
 
-    Object *elem = list_index_get(list, 1);
-    Object *evaluated_elem = eval_sexpression(elem, env);
-    if (evaluated_elem->type != OBJECT_FIXNUM) {
+    Object *elem = list_index_get(list, 0);
+    if (elem->type != OBJECT_FIXNUM) {
         return NULL;
     }
-    fixnum res = evaluated_elem->value.fixnum;
+    fixnum res = elem->value.fixnum;
     
-    Object *elements = list_index(list, 2);
+    Object *elements = list_index(list, 1);
     while (elements->type == OBJECT_PAIR) {
-        Object *evaluated = eval_sexpression(elements->value.pair[0], env);
-        if (evaluated->type != OBJECT_FIXNUM) {
+        Object *element = elements->value.pair[0];
+        if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
-        res -= evaluated->value.fixnum;
+        res -= element->value.fixnum;
         elements = elements->value.pair[1];
     }
 
@@ -397,20 +409,20 @@ Object* builtin_sub_neg(Object *list, Object **env) {
     return result;
 }
 
-Object* builtin_mul(Object *list, Object **env) {
-    if (list_len(list) < 3) {
+Object* builtin_mul(Object *list) {
+    if (list_len(list) < 2) {
         return NULL;
     }
 
     fixnum res = 1;
-    Object *elements = list_index(list, 1);
+    Object *elements = list;
     while (elements->type == OBJECT_PAIR) {
-        Object *evaluated = eval_sexpression(elements->value.pair[0], env);
-        if (evaluated->type != OBJECT_FIXNUM) {
+        Object *element = elements->value.pair[0];
+        if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
-        res *= evaluated->value.fixnum;
+        res *= element->value.fixnum;
         elements = elements->value.pair[1];
     }
 
@@ -421,51 +433,45 @@ Object* builtin_mul(Object *list, Object **env) {
     return result;
 }
 
-// Object* builtin_div(Object *list, Object **env) {
-//     int len = list_len(list);
-//     if (len < 2) {
-//         return NULL;
-//     }
+Object* builtin_quote(Object *list) {
+    return NULL;  
+}
 
-//     if (len == 2) {
-//         Object *elem = list_index_get(list, 1);
-//         Object *evaluated = eval_sexpression(elem, env);
-//         if (evaluated->type != OBJECT_FIXNUM) {
-//             return NULL;
-//         }
+Object* builtin_atom(Object *list){
+    return NULL;  
+}
 
-//         fixnum res = evaluated->value.fixnum;
-//         Object *result = (Object*)calloc(1, sizeof(Object));
-//         result->type = OBJECT_FIXNUM;
-//         result->value.fixnum = res;
+Object* builtin_eq(Object *list){
+    return NULL;  
+}
 
-//         return result;
-//     }
+Object* builtin_cdr(Object *list){
+    return NULL;  
+}
 
-//     Object *elem = list_index_get(list, 1);
-//     Object *evaluated_elem = eval_sexpression(elem, env);
-//     if (evaluated_elem->type != OBJECT_FIXNUM) {
-//         return NULL;
-//     }
-//     fixnum res = evaluated_elem->value.fixnum;
-    
-//     Object *elements = list_index(list, 2);
-//     while (elements->type == OBJECT_PAIR) {
-//         Object *evaluated = eval_sexpression(elements->value.pair[0], env);
-//         if (evaluated->type != OBJECT_FIXNUM) {
-//             return NULL;
-//         }
+Object* builtin_car(Object *list){
+    return NULL;  
+}
 
-//         res -= evaluated->value.fixnum;
-//         elements = elements->value.pair[1];
-//     }
+Object* builtin_cons(Object *list){
+    return NULL;  
+}
 
-//     Object *result = (Object*)calloc(1, sizeof(Object));
-//     result->type = OBJECT_FIXNUM;
-//     result->value.fixnum = res;
+Object* builtin_cond(Object *list){
+    return NULL;  
+}
 
-//     return result;
-// }
+// We guarantee that objects coming in are in cons list format
+Object* eval_all(Object *obj, Object **env) {
+    Object *p = obj;
+    while (p->value.pair[1]->type != OBJECT_NIL) {
+        p->value.pair[0] = eval_sexpression(p->value.pair[0], env);
+        p = p->value.pair[1];
+    }
+
+    print_sexpression(obj);
+    return obj;
+}
 
 Object* eval_sexpression(Object *obj, Object **env) {
     /*
@@ -484,6 +490,7 @@ Object* eval_sexpression(Object *obj, Object **env) {
     case OBJECT_NIL:
         return obj;
     case OBJECT_SYMBOL: // symbol search
+        // TODO: add quoted flag check
         Object *res = env_search(env, obj);
         return res; // TODO: tbf i dont think this behaviour is good
     case OBJECT_PAIR:
@@ -491,19 +498,29 @@ Object* eval_sexpression(Object *obj, Object **env) {
         if (!is_object_list(obj)) {
             return obj;
         }
+        
+        // TODO: change to eval-apply pattern
+        Object* first = list_index_get(obj, 0);
+        if (first->type != OBJECT_SYMBOL) {
+            return obj;
+        }
 
-        if (is_built_in(obj, BUILTIN_VAL)) { // symbol put
-            return builtin_val(obj, env);
-        } else if (is_built_in(obj, BUILTIN_IF)) { // if
-            return builtin_if(obj, env); 
-        } else if (is_built_in(obj, BUILTIN_ADD)) { // add
-            return builtin_add(obj, env); 
-        } else if (is_built_in(obj, BUILTIN_SUB_NEG)) { // add
-            return builtin_sub_neg(obj, env); 
-        } else if (is_built_in(obj, BUILTIN_MUL)) { // add
-            return builtin_mul(obj, env); 
-        } else {
-            return obj; // just return list object for printing
+        // Special functions
+        if (is_built_in(obj, VAL)) {
+            return builtin_val(list_index(obj, 1), env);
+        }
+
+        // Generic functions: pre-evaluate all arguments
+        return apply_func(first->value.symbol, eval_all(list_index(obj, 1), env));
+    }
+
+    return NULL;
+}
+
+Object* apply_func(symbol func_name, Object *args) {
+    for (int i = 0; builtin[i] != NULL; i++) {
+        if (strcmp(builtin[i]->name, func_name) == 0) {
+            return builtin[i]->func(args);
         }
     }
 
