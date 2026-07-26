@@ -235,6 +235,10 @@ char* parse_sexpression(Object *obj, char *buffer) {
         p = parse_fixnum(obj, p);
     } else if (*p == '(') { // TODO: handle explicit pair construction
         p = parse_pair(obj, p);
+    } else if (*p == '\'') { // TODO: handle explicit pair construction
+        p++; // increment to get rid of '
+        p = parse_sexpression(obj, p);
+        obj->quoted = true;
     } else {
         p = parse_symbol(obj, p); // we will have nil as a special case in parsing a symbol
     }
@@ -294,12 +298,12 @@ void print_sexpression(Object *obj) {
 
 // NOTE: we guarantee that the Object coming in is of list type
 // TODO: maybe change this to loop through enums and then return an enum as well?
-bool is_built_in(Object *obj, char *func_name) {
-    if (!(obj->value.pair[0]->type == OBJECT_SYMBOL)) {
+bool is_built_in(Object *first, char *func_name) {
+    if (!(first->type == OBJECT_SYMBOL)) {
         return false;
     }
 
-    return strcmp(obj->value.pair[0]->value.symbol, func_name) == 0;
+    return strcmp(first->value.symbol, func_name) == 0;
 }
 
 Object* builtin_val(Object *list, Object **env) {
@@ -434,7 +438,14 @@ Object* builtin_mul(Object *list) {
 }
 
 Object* builtin_quote(Object *list) {
-    return NULL;  
+      if (list_len(list) != 1) {
+        return NULL;
+      }
+
+      Object *obj = list_index_get(list, 0);
+      obj->quoted = true;
+
+      return obj;
 }
 
 Object* builtin_atom(Object *list){
@@ -498,6 +509,10 @@ Object* eval_sexpression(Object *obj, Object **env) {
         if (!is_object_list(obj)) {
             return obj;
         }
+
+        if (obj->quoted) {
+            return obj;
+        }
         
         // TODO: change to eval-apply pattern
         Object* first = list_index_get(obj, 0);
@@ -506,10 +521,13 @@ Object* eval_sexpression(Object *obj, Object **env) {
         }
 
         // Special functions
-        if (is_built_in(obj, VAL)) {
+        if (is_built_in(first, "val")) {
             return builtin_val(list_index(obj, 1), env);
+        } else if (is_built_in(first, "quote")) {
+            return builtin_quote(list_index(obj, 1));
+        } else if (is_built_in(first, "cond")) {
+            return builtin_cond(list_index(obj, 1)); // TODO
         }
-
         // Generic functions: pre-evaluate all arguments
         return apply_func(first->value.symbol, eval_all(list_index(obj, 1), env));
     }

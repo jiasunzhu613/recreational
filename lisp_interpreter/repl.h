@@ -9,7 +9,6 @@
 #include <assert.h>
 
 #define NIL "nil"
-#define VAL "val"
 
 typedef int64_t fixnum;
 typedef bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
@@ -39,7 +38,7 @@ union Object_Value {
 struct Object {
     Object_Type type;
     Object_Value value;
-    // TODO: add a "quoted" field to distinguish from normal field?
+    bool quoted;
 };
 
 struct Function {
@@ -85,7 +84,7 @@ char* parse_pair(Object *obj, char *p);
 char* parse_sexpression(Object *obj, char *buffer);
 void print_list(Object *obj);
 void print_sexpression(Object *obj);
-bool is_built_in(Object *obj, char *func_name); // TODO: need to verify type of first element in list first
+bool is_built_in(Object *first, char *func_name); // TODO: need to verify type of first element in list first
 Object* eval_all(Object *obj, Object **env);
 Object* eval_sexpression(Object *obj, Object **env); // evaluate sexpression list
 Object* apply_func(symbol func_name, Object *args);
