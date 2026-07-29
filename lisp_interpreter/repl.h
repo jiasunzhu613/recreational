@@ -47,11 +47,14 @@ struct Function {
 };
 
 
-// TODO: define list of available functions
-
 // Environment
 bool env_put(Object **env, Object *key, Object *value); // then we must create entry out of key and value
 Object* env_search(Object **env, Object *key); // returns Object* which represents the value in env
+
+// Intern object pooling
+// TODO: try to merge intern pool and environment functions into one common interface
+Object* pool_put(Object **pool, symbol sym);
+Object* pool_search(Object **pool, symbol sym);
 
 // Builtin Lisp Functions
 // TODO: add a function mapping?
@@ -77,11 +80,12 @@ int list_len(Object *list);
 Object* list_index(Object *list, int ind);
 Object* list_index_get(Object *list, int ind);
 
+// TODO: this is kinda bad design
 char* parse_fixnum(Object *obj, char *p);
 char* parse_boolean(Object *obj, char *p);
-char* parse_symbol(Object *obj, char *p);
-char* parse_pair(Object *obj, char *p);
-char* parse_sexpression(Object *obj, char *buffer);
+char* parse_symbol(Object **obj, char *p, Object **pool);
+char* parse_pair(Object *obj, char *p, Object **pool);
+char* parse_sexpression(Object **obj, char *buffer, Object **pool);
 void print_list(Object *obj);
 void print_sexpression(Object *obj);
 bool is_built_in(Object *first, char *func_name); // TODO: need to verify type of first element in list first
@@ -89,6 +93,6 @@ Object* eval_all(Object *obj, Object **env);
 Object* eval_sexpression(Object *obj, Object **env); // evaluate sexpression list
 Object* apply_func(symbol func_name, Object *args);
 
-int eval(char *buffer, Object **env); // main evaluation entrypoint
+int eval(char *buffer, Object **env, Object **pool); // main evaluation entrypoint
 
 #endif // REPL_HEADER

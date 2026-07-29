@@ -19,6 +19,7 @@ Function *builtin[] = {
     &(Function){.name="cdr", .func=builtin_cdr},
     &(Function){.name="car", .func=builtin_car},
     &(Function){.name="cons", .func=builtin_cons},
+    &(Function){.name="eq", .func=builtin_eq},
     NULL
 };
 
@@ -70,6 +71,41 @@ Object* env_search(Object **env, Object *key) {
     }
 
     printf("DEBUG: DID NOT FIND SHIT IN ENV_SEARCH\n");
+    return NULL; // TODO: decide what to do here?
+}
+
+Object* pool_put(Object **pool, symbol sym) {
+    // always pair up
+    Object *entry = (Object*) calloc(1, sizeof(Object));
+    entry->type = OBJECT_SYMBOL;
+    entry->value.symbol = sym;
+
+    Object *new_pool = (Object*) calloc(1, sizeof(Object));
+    new_pool->type = OBJECT_PAIR;
+    new_pool->value.pair[0] = entry;
+    new_pool->value.pair[1] = *pool;
+
+    print_sexpression(new_pool);
+
+    *pool = new_pool;
+    return entry;
+}
+
+Object* pool_search(Object **pool, symbol sym) {
+    Object *p = *pool;
+
+    while (p->type != OBJECT_NIL) {
+        Object *entry = p->value.pair[0]; // TODO: might need to validate this, this should be a entry though
+        symbol entry_sym = entry->value.symbol; // get symbol from entry
+
+        if (strcmp(entry_sym, sym) == 0) {
+            return entry;
+        }
+
+        p = p->value.pair[1];
+    }
+
+    printf("DEBUG: DID NOT FIND SHIT IN POOL_SEARCH\n");
     return NULL; // TODO: decide what to do here?
 }
 
@@ -166,7 +202,7 @@ char* parse_boolean(Object *obj, char *p) {
     return ++p;
 }
 
-char* parse_symbol(Object *obj, char *p) {
+char* parse_symbol(Object **obj, char *p, Object **pool) {
     symbol expr = NULL;
 
     size_t length = 0;
@@ -178,18 +214,29 @@ char* parse_symbol(Object *obj, char *p) {
     expr = (symbol) malloc(length);
     memcpy(expr, p - length, length); // because we ++ at the end of the while loop too
 
+    // check if symbol is already registered to return interned object
+    Object *interned = pool_search(pool, expr);
+
+    if (interned != NULL) {
+        *obj = interned; // assign interned symbol object
+        return p;
+    }
+
+    // TODO: intern nil to a singleton instance
     if (length == 3 && strcmp(expr, NIL) == 0) { // special case: nil
-        obj->value.nil = NULL;
-        obj->type = OBJECT_NIL;
-    } else {        
-        obj->value.symbol = expr;
-        obj->type = OBJECT_SYMBOL;
+        (*obj)->value.nil = NULL;
+        (*obj)->type = OBJECT_NIL;
+    } else {      
+        // add to global intern pool
+        Object *pool_result = pool_put(pool, expr);
+        *obj = pool_result;
+        // TODO: check if success or not, error handling
     }
 
     return p;
 }
 
-char* parse_pair(Object *obj, char *p) {
+char* parse_pair(Object *obj, char *p, Object **pool) {
     p++;
     if (*p == ')') {
         obj->type = OBJECT_NIL;
@@ -200,7 +247,7 @@ char* parse_pair(Object *obj, char *p) {
     obj->type = OBJECT_PAIR;
 
     Object *car = (Object *) calloc(1, sizeof(Object));
-    p = parse_sexpression(car, p);
+    p = parse_sexpression(&car, p, pool);
     
     obj->value.pair[0] = car;
     if (*p == ')') {
@@ -212,7 +259,7 @@ char* parse_pair(Object *obj, char *p) {
         p++;
     } else { // guaranteed to be technically of type PAIR
         Object *cdr = (Object *) calloc(1, sizeof(Object));
-        p = parse_pair(cdr, p);
+        p = parse_pair(cdr, p, pool);
 
         obj->value.pair[1] = cdr;
     }
@@ -221,24 +268,21 @@ char* parse_pair(Object *obj, char *p) {
 }
 
 // TODO: size is actually unused right now
-char* parse_sexpression(Object *obj, char *buffer) {
+char* parse_sexpression(Object **obj, char *buffer, Object **pool) {
     char *p = trim_whitespace(buffer);
 
-    // else if (*p == '\'') {
-    //     p = parse_symbol(obj, p);
-    // } 
     if (*p == '#') {
-        p = parse_boolean(obj, p);
+        p = parse_boolean(*obj, p);
     } else if (*p == '-' || (*p >= '0' && *p <= '9')) {
-        p = parse_fixnum(obj, p);
+        p = parse_fixnum(*obj, p);
     } else if (*p == '(') { // TODO: handle explicit pair construction
-        p = parse_pair(obj, p);
+        p = parse_pair(*obj, p, pool);
     } else if (*p == '\'') { // TODO: handle explicit pair construction
         p++; // increment to get rid of '
-        p = parse_sexpression(obj, p);
-        obj->quoted = true;
+        p = parse_sexpression(obj, p, pool);
+        (*obj)->quoted = true;
     } else {
-        p = parse_symbol(obj, p); // we will have nil as a special case in parsing a symbol
+        p = parse_symbol(obj, p, pool); // we will have nil as a special case in parsing a symbol
     }
 
     return p;
@@ -447,7 +491,7 @@ Object* builtin_quote(Object *list) {
 }
 
 Object* builtin_atom(Object *list){
-     if (list_len(list) != 1) {
+    if (list_len(list) != 1) {
         return NULL;
     }
     
@@ -465,7 +509,18 @@ Object* builtin_atom(Object *list){
 }
 
 Object* builtin_eq(Object *list){
-    return NULL;  
+    if (list_len(list) != 2) {
+        return NULL;
+    }
+
+    Object *obj1 = list_index_get(list, 0);
+    Object *obj2 = list_index_get(list, 1);
+    
+    Object *res = (Object*)calloc(1, sizeof(Object));
+    res->type = OBJECT_BOOLEAN;
+    res->value.boolean = obj1 == obj2;
+
+    return res;
 }
 
 Object* builtin_cdr(Object *list){
@@ -540,7 +595,7 @@ Object* builtin_cond(Object *list, Object **env){
 // We guarantee that objects coming in are in cons list format
 Object* eval_all(Object *obj, Object **env) {
     Object *p = obj;
-    while (p->value.pair[1]->type != OBJECT_NIL) {
+    while (p->type != OBJECT_NIL) {
         p->value.pair[0] = eval_sexpression(p->value.pair[0], env);
         p = p->value.pair[1];
     }
@@ -565,7 +620,12 @@ Object* eval_sexpression(Object *obj, Object **env) {
     case OBJECT_NIL:
         return obj;
     case OBJECT_SYMBOL: // symbol search
+        printf("DEBUG: THIS IS THE MEM ADDRESS FOR SYMBOL [%s] => %p\n", obj->value.symbol, obj);
         // TODO: add quoted flag check
+        if (obj->quoted) {
+            return obj;
+        }
+
         Object *res = env_search(env, obj);
         return res; // TODO: tbf i dont think this behaviour is good
     case OBJECT_PAIR:
@@ -592,6 +652,7 @@ Object* eval_sexpression(Object *obj, Object **env) {
         } else if (is_built_in(first, "cond")) {
             return builtin_cond(list_index(obj, 1), env); // TODO
         }
+
         // Generic functions: pre-evaluate all arguments
         return apply_func(first->value.symbol, eval_all(list_index(obj, 1), env));
     }
@@ -609,13 +670,13 @@ Object* apply_func(symbol func_name, Object *args) {
     return NULL;
 }
 
-int eval(char *buffer, Object **env) {
+int eval(char *buffer, Object **env, Object **pool) {
     // TODO: need AST parser???
-    Object obj = {};
+    Object *obj = (Object*)calloc(1, sizeof(Object));
 
-    buffer = parse_sexpression(&obj, buffer); // parse object from buffer
+    buffer = parse_sexpression(&obj, buffer, pool); // parse object from buffer
     
-    Object *eval_obj = eval_sexpression(&obj, env); // evaluate object
+    Object *eval_obj = eval_sexpression(obj, env); // evaluate object
 
     print_sexpression(eval_obj); // print object
     printf("\n");

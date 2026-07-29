@@ -9,6 +9,10 @@ int main() {
     env->type = OBJECT_NIL;
     env->value.nil = NULL;
 
+    Object *pool = (Object*)calloc(1, sizeof(Object));
+    env->type = OBJECT_NIL;
+    env->value.nil = NULL;
+
     while (1) {
         printf(">>> "); // Print prompt
 
@@ -20,7 +24,7 @@ int main() {
             return 0;
         }
         
-        int error = eval(buffer, &env);
+        int error = eval(buffer, &env, &pool);
         if (error) {
             return error;
         }
