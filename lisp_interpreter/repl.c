@@ -9,6 +9,7 @@ Recreational programming session referencing:
 */
 
 #include "repl.h"
+#include "ast.h"
 
 Function *builtin[] = {
     &(Function){.name="if", .func=builtin_if}, // NOTE: {} syntax provides the data, but we still need to cast to Function type!
@@ -286,6 +287,14 @@ char* parse_sexpression(Object **obj, char *buffer, Object **pool) {
     }
 
     return p;
+}
+
+Expression* build_ast(Object *obj) {
+    // switch (obj->type) {
+    // case 
+    // }
+
+    return NULL:
 }
 
 void print_list(Object *obj) {

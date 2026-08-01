@@ -5,6 +5,7 @@ int main() {
     char *buffer = NULL;
     size_t size = 0;
 
+    // TODO: update these to hashmaps or something better later!
     Object *env = (Object*)calloc(1, sizeof(Object));
     env->type = OBJECT_NIL;
     env->value.nil = NULL;
