@@ -312,6 +312,7 @@ char *parse_sexpression(Object **obj, char *buffer, Object **pool) {
 
 Expression *build_ast(Object *obj) {
     Expression *expression = (Expression *)calloc(1, sizeof(Expression));
+    expression->statement = (Expression_Statement *)calloc(1, sizeof(Expression_Statement));
 
     switch (obj->type) {
     case OBJECT_NIL:    // fallthrough
@@ -370,13 +371,13 @@ Expression *build_ast(Object *obj) {
             expression->statement->call_expr.name = first->value.symbol;
             // TODO: build inner element into AST
             // buid into fixed sized call args array
-            Expression *args = (Expression *)calloc(list_len(obj) - 1, sizeof(Expression));
+            Expression **args = (Expression **)calloc(list_len(obj) - 1, sizeof(Expression*));
             Object *args_object = list_index_get(obj, 1);
 
             // Build all list elements into array of AST expressions
 
             int i;
-            for (i = 0; args_object->type != OBJECT_NULL; i++) {
+            for (i = 0; args_object->type != OBJECT_NIL; i++) {
                 args[i] = build_ast(args_object->value.pair[0]);
                 args_object = args_object->value.pair[1];
             }
@@ -450,14 +451,13 @@ Object *builtin_add(Expression *call_exp, Object **env) {
     }
 
     fixnum res = 0;
-    for (int i = 0; i < call_exp->statement->call_expr.num_args; i++){
+    for (int i = 0; i < call_exp->statement->call_expr.num_args; i++) {
         Object *element = eval_ast(call_exp->statement->call_expr.args[i], env);
         if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
         res += element->value.fixnum;
-        elements = elements->value.pair[1];
     }
 
     Object *result = (Object *)calloc(1, sizeof(Object));
@@ -493,14 +493,13 @@ Object *builtin_sub_neg(Expression *call_exp, Object **env) {
     }
     fixnum res = elem->value.fixnum;
 
-    for (int i = 1; i < call_exp->statement->call_expr.num_args; i++){
+    for (int i = 1; i < len; i++) {
         Object *element = eval_ast(call_exp->statement->call_expr.args[i], env);
         if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
         res -= element->value.fixnum;
-        elements = elements->value.pair[1];
     }
 
     Object *result = (Object *)calloc(1, sizeof(Object));
@@ -511,20 +510,19 @@ Object *builtin_sub_neg(Expression *call_exp, Object **env) {
 }
 
 Object *builtin_mul(Expression *call_exp, Object **env) {
-    if (list_len(list) < 2) {
+    int len = call_exp->statement->call_expr.num_args;
+    if (len < 2) {
         return NULL;
     }
 
     fixnum res = 1;
-    Object *elements = list;
-    while (elements->type == OBJECT_PAIR) {
-        Object *element = elements->value.pair[0];
+    for (int i = 0; i < len; i++) {
+        Object *element = eval_ast(call_exp->statement->call_expr.args[i], env);
         if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
         res *= element->value.fixnum;
-        elements = elements->value.pair[1];
     }
 
     Object *result = (Object *)calloc(1, sizeof(Object));
@@ -535,41 +533,37 @@ Object *builtin_mul(Expression *call_exp, Object **env) {
 }
 
 Object *builtin_quote(Expression *call_exp, Object **env) {
-    if (list_len(list) != 1) {
+    if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
     }
 
-    Object *obj = list_index_get(list, 0);
+    Object *obj = eval_ast(call_exp->statement->call_expr.args[0], env);
     obj->quoted = true;
 
     return obj;
 }
 
 Object *builtin_atom(Expression *call_exp, Object **env) {
-    if (list_len(list) != 1) {
+    if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
     }
 
-    Object *inner_elem = list_index_get(list, 0);
+    Object *inner_elem = eval_ast(call_exp->statement->call_expr.args[0], env);
     Object *ret = (Object *)calloc(1, sizeof(Object));
     ret->type = OBJECT_BOOLEAN;
 
-    if (is_object_list(inner_elem)) {
-        ret->value.boolean = false;
-    } else {
-        ret->value.boolean = true;
-    }
+    ret->value.boolean = !is_object_list(inner_elem);
 
     return ret;
 }
 
 Object *builtin_eq(Expression *call_exp, Object **env) {
-    if (list_len(list) != 2) {
+    if (call_exp->statement->call_expr.num_args != 2) {
         return NULL;
     }
 
-    Object *obj1 = list_index_get(list, 0);
-    Object *obj2 = list_index_get(list, 1);
+    Object *obj1 = eval_ast(call_exp->statement->call_expr.args[0], env);
+    Object *obj2 = eval_ast(call_exp->statement->call_expr.args[1], env);
 
     Object *res = (Object *)calloc(1, sizeof(Object));
     res->type = OBJECT_BOOLEAN;
@@ -579,52 +573,52 @@ Object *builtin_eq(Expression *call_exp, Object **env) {
 }
 
 Object *builtin_cdr(Expression *call_exp, Object **env) {
-    if (list_len(list) != 1) {
+    if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
     }
 
-    Object *inner_list = list_index_get(list, 0);
+    Object *inner_list = eval_ast(call_exp->statement->call_expr.args[0], env);
     if (inner_list->type != OBJECT_PAIR) {
         return NULL;
     }
 
-    return list_index_get(inner_list, 0);
+    return inner_list->value.pair[1];
 }
 
 Object *builtin_car(Expression *call_exp, Object **env) {
-    if (list_len(list) != 1) {
+    if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
     }
 
-    Object *inner_list = list_index_get(list, 0);
+    Object *inner_list = eval_ast(call_exp->statement->call_expr.args[0], env);
     if (inner_list->type != OBJECT_PAIR) {
         return NULL;
     }
 
-    return list_index(inner_list, 1);
+    return inner_list->value.pair[0];
 }
 
 Object *builtin_cons(Expression *call_exp, Object **env) {
-    if (list_len(list) != 2) {
+    if (call_exp->statement->call_expr.num_args != 2) {
         return NULL;
     }
 
     Object *obj = (Object *)calloc(1, sizeof(Object));
     obj->type = OBJECT_PAIR;
-    obj->value.pair[0] = list_index_get(list, 0);
-    obj->value.pair[1] = list_index_get(list, 1);
+    obj->value.pair[0] = eval_ast(call_exp->statement->call_expr.args[0], env);
+    obj->value.pair[1] = eval_ast(call_exp->statement->call_expr.args[1], env);
 
     return obj;
 }
 
+// TODO: this need to have special handling
 Object *builtin_cond(Expression *call_exp, Object **env) {
-    if (list_len(list) < 1) {
+    if (call_exp->statement->call_expr.num_args < 1) {
         return NULL;
     }
 
-    Object *pairs = list;
-    while (pairs->type == OBJECT_PAIR) {
-        Object *pair = pairs->value.pair[0];
+    for (int i = 0; i < call_exp->statement->call_expr.num_args; i++) {
+        Object *pair = eval_ast(call_exp->statement->call_expr.args[i], env);
         if (!is_object_list(pair)) {
             return NULL;
         }
@@ -632,17 +626,14 @@ Object *builtin_cond(Expression *call_exp, Object **env) {
             return NULL;
         }
 
-        Object *condition = eval_sexpression(list_index_get(pair, 0), env);
+        Object *condition = list_index_get(pair, 0);
         if (condition->type != OBJECT_BOOLEAN) {
             return NULL;
         }
 
         if (condition->value.boolean) {
-            return eval_sexpression(list_index_get(pair, 1), env);
-            ;
+            return list_index_get(pair, 1);
         }
-
-        pairs = pairs->value.pair[1];
     }
 
     return NULL; // no condition matched
@@ -670,14 +661,6 @@ Object *eval_ast(Expression *exp, Object **env) {
     evaluate a built-in function, a lambda, or simply just print out a list.
     */
 
-    /*
-    EXPR_IF,
-    EXPR_AND,
-    EXPR_OR,
-    EXPR_CALL,
-    EXPR_DEF
-
-    */
     switch (exp->type) {
     case EXPR_LITERAL:
         return exp->statement->literal_expr;
@@ -686,16 +669,16 @@ Object *eval_ast(Expression *exp, Object **env) {
         return res; // TODO: tbf i dont think this behaviour is good, might need to change the NULL
                     // default behaviour
     case EXPR_IF:
-        Object *cond = eval_ast(exp->statement->if_expr.cond, env);
+        Object *cond = eval_ast(exp->statement->if_expr.condition, env);
 
         // Check cond type
         if (cond->type != OBJECT_BOOLEAN) {
             return NULL; // TODO: determine behaviour
         }
 
-        return cond->value.boolean ? eval_ast(exp->statement->if_expr.left, env)
-                                   : eval_ast(exp->statement->if_expr.right, env);
-    case EXPR_AND:
+        return cond->value.boolean ? eval_ast(exp->statement->if_expr.if_true, env)
+                                   : eval_ast(exp->statement->if_expr.if_false, env);
+    case EXPR_AND: {
         Object *left = eval_ast(exp->statement->and_expr.left, env);
         Object *right = eval_ast(exp->statement->and_expr.right, env);
 
@@ -707,8 +690,9 @@ Object *eval_ast(Expression *exp, Object **env) {
         ret->type = OBJECT_BOOLEAN;
         ret->value.boolean = left->value.boolean && right->value.boolean;
 
-        return ret;
-    case EXPR_OR:
+        return ret; 
+    }
+    case EXPR_OR: {
         Object *left = eval_ast(exp->statement->and_expr.left, env);
         Object *right = eval_ast(exp->statement->and_expr.right, env);
 
@@ -721,13 +705,14 @@ Object *eval_ast(Expression *exp, Object **env) {
         ret->value.boolean = left->value.boolean || right->value.boolean;
 
         return ret;
+    }
     case EXPR_DEF:
         Def_Expression *def_exp = exp->statement->def_expr;
         switch (def_exp->type) {
         case EXPR_VAL:
             Object *key = (Object *)calloc(1, sizeof(Object));
-            ret->type = OBJECT_SYMBOL;
-            ret->value.symbol = def_exp->statement->val_expr.name;
+            key->type = OBJECT_SYMBOL;
+            key->value.symbol = def_exp->statement->val_expr.name;
 
             bool success = env_put(env, key, eval_ast(def_exp->statement->val_expr.assign_value, env));
             // TODO: check success?
@@ -735,7 +720,7 @@ Object *eval_ast(Expression *exp, Object **env) {
         }
         break;
     case EXPR_CALL:
-        return apply_func(exp->statement->call_expr.name, exp->statement->call_expr.args);
+        return apply_func(exp, env);
     }
 
     return NULL;
@@ -757,7 +742,6 @@ int eval(char *buffer, Object **env, Object **pool) {
 
     buffer = parse_sexpression(&obj, buffer, pool); // parse object from buffer
 
-    // TODO: build into AST
     Expression *ast_expr = build_ast(obj);
 
     Object *eval_obj = eval_ast(ast_expr, env); // evaluate object

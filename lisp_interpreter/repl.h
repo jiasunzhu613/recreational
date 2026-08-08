@@ -49,7 +49,7 @@ void print_list(Object *obj);
 void print_sexpression(Object *obj);
 // Object *eval_all(Object *obj, Object **env);
 Object *eval_ast(Expression *exp, Object **env); // evaluate ast
-Object *apply_func(symbol func_name, Object *args);
+Object *apply_func(Expression *call_exp, Object **env);
 
 // AST Functions
 Expression *build_ast(Object *obj);

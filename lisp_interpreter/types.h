@@ -87,7 +87,7 @@ struct Or {
 // Function call for closures
 struct Call {
     symbol name;
-    Expression *args;
+    Expression **args;
     int num_args;
 };
 
