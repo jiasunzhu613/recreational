@@ -1,4 +1,4 @@
-/* 
+/*
 Read, Evaluate, Print Loop for interpreting LISP
 
 DISCLAIMER: this may not be an exact one to one replication of any specific well-known LISP dialect
@@ -9,29 +9,28 @@ Recreational programming session referencing:
 */
 
 #include "repl.h"
-#include "ast.h"
 
+// NOTE: {} syntax provides the data, but we
+// still need to cast to Function type!
 Function *builtin[] = {
-    &(Function){.name="if", .func=builtin_if}, // NOTE: {} syntax provides the data, but we still need to cast to Function type!
-    &(Function){.name="+", .func=builtin_add},
-    &(Function){.name="-", .func=builtin_sub_neg},
-    &(Function){.name="*", .func=builtin_mul},
-    &(Function){.name="atom", .func=builtin_atom},
-    &(Function){.name="cdr", .func=builtin_cdr},
-    &(Function){.name="car", .func=builtin_car},
-    &(Function){.name="cons", .func=builtin_cons},
-    &(Function){.name="eq", .func=builtin_eq},
-    NULL
-};
+    &(Function){.name = "+", .func = builtin_add},
+    &(Function){.name = "-", .func = builtin_sub_neg},
+    &(Function){.name = "*", .func = builtin_mul},
+    &(Function){.name = "atom", .func = builtin_atom},
+    &(Function){.name = "cdr", .func = builtin_cdr},
+    &(Function){.name = "car", .func = builtin_car},
+    &(Function){.name = "cons", .func = builtin_cons},
+    &(Function){.name = "eq", .func = builtin_eq},
+    NULL};
 
 bool env_put(Object **env, Object *key, Object *value) {
     // always pair up
-    Object *entry = (Object*) calloc(1, sizeof(Object));
+    Object *entry = (Object *)calloc(1, sizeof(Object));
     entry->type = OBJECT_PAIR;
     entry->value.pair[0] = key;
     entry->value.pair[1] = value;
 
-    Object *new_env = (Object*) calloc(1, sizeof(Object));
+    Object *new_env = (Object *)calloc(1, sizeof(Object));
     new_env->type = OBJECT_PAIR;
     new_env->value.pair[0] = entry;
     new_env->value.pair[1] = *env;
@@ -42,15 +41,16 @@ bool env_put(Object **env, Object *key, Object *value) {
     return true;
 }
 
-Object* env_search(Object **env, Object *key) {
-    // TODO: need some way to compare the value of key which will be a symbol and what is in the env, compare strings, strcmp
-    // key should never be a non-symbol
+Object *env_search(Object **env, Object *key) {
+    // TODO: need some way to compare the value of key which will be a symbol and what is in the
+    // env, compare strings, strcmp key should never be a non-symbol
     assert(key->type == OBJECT_SYMBOL); // TODO: maybe mark with better logging instead
 
     Object *p = *env;
 
     while (p->type != OBJECT_NIL) {
-        Object *entry = p->value.pair[0]; // TODO: might need to validate this, this should be a entry though
+        Object *entry =
+            p->value.pair[0]; // TODO: might need to validate this, this should be a entry though
         Object *entry_key = entry->value.pair[0]; // get first elem from entry pair
         printf("DEBUG: on entry\n");
         print_sexpression(entry);
@@ -75,13 +75,13 @@ Object* env_search(Object **env, Object *key) {
     return NULL; // TODO: decide what to do here?
 }
 
-Object* pool_put(Object **pool, symbol sym) {
+Object *pool_put(Object **pool, symbol sym) {
     // always pair up
-    Object *entry = (Object*) calloc(1, sizeof(Object));
+    Object *entry = (Object *)calloc(1, sizeof(Object));
     entry->type = OBJECT_SYMBOL;
     entry->value.symbol = sym;
 
-    Object *new_pool = (Object*) calloc(1, sizeof(Object));
+    Object *new_pool = (Object *)calloc(1, sizeof(Object));
     new_pool->type = OBJECT_PAIR;
     new_pool->value.pair[0] = entry;
     new_pool->value.pair[1] = *pool;
@@ -92,11 +92,12 @@ Object* pool_put(Object **pool, symbol sym) {
     return entry;
 }
 
-Object* pool_search(Object **pool, symbol sym) {
+Object *pool_search(Object **pool, symbol sym) {
     Object *p = *pool;
 
     while (p->type != OBJECT_NIL) {
-        Object *entry = p->value.pair[0]; // TODO: might need to validate this, this should be a entry though
+        Object *entry =
+            p->value.pair[0]; // TODO: might need to validate this, this should be a entry though
         symbol entry_sym = entry->value.symbol; // get symbol from entry
 
         if (strcmp(entry_sym, sym) == 0) {
@@ -110,10 +111,12 @@ Object* pool_search(Object **pool, symbol sym) {
     return NULL; // TODO: decide what to do here?
 }
 
-char* trim_whitespace(char *buffer) {
+char *trim_whitespace(char *buffer) {
     char *p = buffer;
-    while (*p == ' ' || *p == '\n' || *p == '\t') { p++; }
-    
+    while (*p == ' ' || *p == '\n' || *p == '\t') {
+        p++;
+    }
+
     return p;
 }
 
@@ -145,7 +148,7 @@ int list_len(Object *list) {
     return count + 1;
 }
 
-Object* list_index(Object *list, int ind) {
+Object *list_index(Object *list, int ind) {
     while (ind > 0 && list->type != OBJECT_NIL) {
         ind--;
         list = list->value.pair[1];
@@ -158,11 +161,29 @@ Object* list_index(Object *list, int ind) {
     return list;
 }
 
-Object* list_index_get(Object *list, int ind) {
-    return list_index(list, ind)->value.pair[0];
+Object *list_index_get(Object *list, int ind) { return list_index(list, ind)->value.pair[0]; }
+
+// NOTE: we guarantee that the Object coming in is of list type
+// TODO: maybe change this to loop through enums and then return an enum as well?
+bool is_built_in(Object *first, char *func_name) {
+    if (!(first->type == OBJECT_SYMBOL)) {
+        return false;
+    }
+
+    return strcmp(first->value.symbol, func_name) == 0;
 }
 
-char* parse_fixnum(Object *obj, char *p) {
+bool is_one_of_built_in(Object *first) {
+    for (int i = 0; builtin[i] != NULL; i++) {
+        if (strcmp(builtin[i]->name, first->value.symbol) == 0) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+char *parse_fixnum(Object *obj, char *p) {
     fixnum expr = 0;
     int is_negative = 0;
 
@@ -187,7 +208,7 @@ char* parse_fixnum(Object *obj, char *p) {
     return p;
 }
 
-char* parse_boolean(Object *obj, char *p) {
+char *parse_boolean(Object *obj, char *p) {
     p++; // increment for # delimiter
     boolean expr = false;
 
@@ -203,7 +224,7 @@ char* parse_boolean(Object *obj, char *p) {
     return ++p;
 }
 
-char* parse_symbol(Object **obj, char *p, Object **pool) {
+char *parse_symbol(Object **obj, char *p, Object **pool) {
     symbol expr = NULL;
 
     size_t length = 0;
@@ -212,7 +233,7 @@ char* parse_symbol(Object **obj, char *p, Object **pool) {
         p++;
     }
 
-    expr = (symbol) malloc(length);
+    expr = (symbol)malloc(length);
     memcpy(expr, p - length, length); // because we ++ at the end of the while loop too
 
     // check if symbol is already registered to return interned object
@@ -227,7 +248,7 @@ char* parse_symbol(Object **obj, char *p, Object **pool) {
     if (length == 3 && strcmp(expr, NIL) == 0) { // special case: nil
         (*obj)->value.nil = NULL;
         (*obj)->type = OBJECT_NIL;
-    } else {      
+    } else {
         // add to global intern pool
         Object *pool_result = pool_put(pool, expr);
         *obj = pool_result;
@@ -237,7 +258,7 @@ char* parse_symbol(Object **obj, char *p, Object **pool) {
     return p;
 }
 
-char* parse_pair(Object *obj, char *p, Object **pool) {
+char *parse_pair(Object *obj, char *p, Object **pool) {
     p++;
     if (*p == ')') {
         obj->type = OBJECT_NIL;
@@ -247,19 +268,19 @@ char* parse_pair(Object *obj, char *p, Object **pool) {
 
     obj->type = OBJECT_PAIR;
 
-    Object *car = (Object *) calloc(1, sizeof(Object));
+    Object *car = (Object *)calloc(1, sizeof(Object));
     p = parse_sexpression(&car, p, pool);
-    
+
     obj->value.pair[0] = car;
     if (*p == ')') {
-        Object *cdr = (Object *) calloc(1, sizeof(Object));
+        Object *cdr = (Object *)calloc(1, sizeof(Object));
         cdr->type = OBJECT_NIL;
         cdr->value.nil = NULL;
 
         obj->value.pair[1] = cdr;
         p++;
     } else { // guaranteed to be technically of type PAIR
-        Object *cdr = (Object *) calloc(1, sizeof(Object));
+        Object *cdr = (Object *)calloc(1, sizeof(Object));
         p = parse_pair(cdr, p, pool);
 
         obj->value.pair[1] = cdr;
@@ -269,7 +290,7 @@ char* parse_pair(Object *obj, char *p, Object **pool) {
 }
 
 // TODO: size is actually unused right now
-char* parse_sexpression(Object **obj, char *buffer, Object **pool) {
+char *parse_sexpression(Object **obj, char *buffer, Object **pool) {
     char *p = trim_whitespace(buffer);
 
     if (*p == '#') {
@@ -279,7 +300,7 @@ char* parse_sexpression(Object **obj, char *buffer, Object **pool) {
     } else if (*p == '(') { // TODO: handle explicit pair construction
         p = parse_pair(*obj, p, pool);
     } else if (*p == '\'') { // TODO: handle explicit pair construction
-        p++; // increment to get rid of '
+        p++;                 // increment to get rid of '
         p = parse_sexpression(obj, p, pool);
         (*obj)->quoted = true;
     } else {
@@ -289,19 +310,91 @@ char* parse_sexpression(Object **obj, char *buffer, Object **pool) {
     return p;
 }
 
-Expression* build_ast(Object *obj) {
-    // switch (obj->type) {
-    // case 
-    // }
+Expression *build_ast(Object *obj) {
+    Expression *expression = (Expression *)calloc(1, sizeof(Expression));
 
-    return NULL:
+    switch (obj->type) {
+    case OBJECT_NIL:    // fallthrough
+    case OBJECT_FIXNUM: // fallthrough
+    case OBJECT_BOOLEAN:
+        expression->type = EXPR_LITERAL;
+        expression->statement->literal_expr = obj;
+        break;
+    case OBJECT_SYMBOL:
+        if (obj->quoted) {
+            expression->type = EXPR_LITERAL;
+            expression->statement->literal_expr = obj;
+            break;
+        }
+
+        expression->type = EXPR_VAR;
+        expression->statement->var_expr = (Var){.name = obj->value.symbol};
+        break;
+    case OBJECT_PAIR:
+        if (!is_object_list(obj) || obj->quoted) {
+            expression->type = EXPR_LITERAL;
+            expression->statement->literal_expr = obj;
+            break;
+        }
+
+        Object *first = list_index_get(obj, 0);
+
+        // Handle definition expressions first
+        if (strcmp(first->value.symbol, IF) == 0) {
+            // TODO: error handling
+            expression->type = EXPR_IF;
+            expression->statement->if_expr.condition = build_ast(list_index_get(obj, 1));
+            expression->statement->if_expr.if_true = build_ast(list_index_get(obj, 2));
+            expression->statement->if_expr.if_false = build_ast(list_index_get(obj, 3));
+        } else if (strcmp(first->value.symbol, AND) == 0) {
+            expression->type = EXPR_AND;
+            expression->statement->and_expr.left = build_ast(list_index_get(obj, 1));
+            expression->statement->and_expr.right = build_ast(list_index_get(obj, 2));
+        } else if (strcmp(first->value.symbol, OR) == 0) {
+            expression->type = EXPR_OR;
+            expression->statement->or_expr.left = build_ast(list_index_get(obj, 1));
+            expression->statement->or_expr.right = build_ast(list_index_get(obj, 2));
+        } else if (strcmp(first->value.symbol, VAL) == 0) {
+            expression->type = EXPR_DEF;
+            Def_Expression *def_expr = expression->statement->def_expr;
+            Object *name = list_index_get(obj, 1);
+            Object *value = list_index_get(obj, 2);
+
+            // TODO: need to check types
+            def_expr->type = EXPR_VAL;
+            def_expr->statement->val_expr.name = name->value.symbol;
+            def_expr->statement->val_expr.assign_value = build_ast(value);
+        } else {
+            // TODO: need to check types
+            expression->type = EXPR_CALL;
+            expression->statement->call_expr.name = first->value.symbol;
+            // TODO: build inner element into AST
+            // buid into fixed sized call args array
+            Expression *args = (Expression *)calloc(list_len(obj) - 1, sizeof(Expression));
+            Object *args_object = list_index_get(obj, 1);
+
+            // Build all list elements into array of AST expressions
+
+            int i;
+            for (i = 0; args_object->type != OBJECT_NULL; i++) {
+                args[i] = build_ast(args_object->value.pair[0]);
+                args_object = args_object->value.pair[1];
+            }
+
+            expression->statement->call_expr.args = args;
+            expression->statement->call_expr.num_args = i;
+        }
+        break;
+    }
+
+    return expression;
 }
 
 void print_list(Object *obj) {
     // Guarantee the object coming in is of list like structure initially
     // Being OBJECT_PAIR is baseline requirement
     assert(obj->type == OBJECT_PAIR);
-    
+
     while (obj->value.pair[1]->type != OBJECT_NIL) {
         print_sexpression(obj->value.pair[0]);
         printf(" ");
@@ -336,75 +429,29 @@ void print_sexpression(Object *obj) {
             print_list(obj);
             printf(")");
         } else { // Print in pair syntax instead
-             printf("(");
+            printf("(");
             print_sexpression(obj->value.pair[0]);
             printf(" . ");
             print_sexpression(obj->value.pair[1]);
             printf(")");
         }
-    
+
         break;
     }
 }
 
-// NOTE: we guarantee that the Object coming in is of list type
-// TODO: maybe change this to loop through enums and then return an enum as well?
-bool is_built_in(Object *first, char *func_name) {
-    if (!(first->type == OBJECT_SYMBOL)) {
-        return false;
-    }
+// TODO: print AST?
 
-    return strcmp(first->value.symbol, func_name) == 0;
-}
+// BUILTIN Functions
 
-Object* builtin_val(Object *list, Object **env) {
-    if (list_len(list) != 2) {
-        return NULL; // TODO: decide if this return value is good or not
-    }
-
-    Object *env_key = list_index_get(list, 0);
-    Object *env_value = eval_sexpression(list_index_get(list, 1), env);
-
-    // Make sure env_key is a symbol
-    if (env_key->type != OBJECT_SYMBOL) {
-        return NULL;
-    }
-
-    bool success = env_put(env, env_key, env_value);
-    printf("DEBUG: env_put in builtinval => %d\n", success);
-    return NULL;
-}
-
-Object* builtin_if(Object *list) {
-    if (list_len(list) != 3) {
-        return NULL; // TODO: decide if this return value is good or not
-    }
-
-    Object *condition = list_index_get(list, 0);
-    Object *action_true = list_index_get(list, 1);
-    Object *action_false = list_index_get(list, 2);
-
-    if (condition->type != OBJECT_BOOLEAN) {
-        return NULL; // TODO: this should emit an error
-    }
-
-    if (condition->value.boolean) {
-        return action_true;
-    } else {
-        return action_false;
-    }
-}
-
-Object* builtin_add(Object *list) {
-    if (list_len(list) < 2) {
+Object *builtin_add(Expression *call_exp, Object **env) {
+    if (call_exp->statement->call_expr.num_args < 2) {
         return NULL;
     }
 
     fixnum res = 0;
-    Object *elements = list;
-    print_sexpression(list);
-    while (elements->type == OBJECT_PAIR) {
-        Object *element = elements->value.pair[0];
+    for (int i = 0; i < call_exp->statement->call_expr.num_args; i++){
+        Object *element = eval_ast(call_exp->statement->call_expr.args[i], env);
         if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
@@ -413,42 +460,41 @@ Object* builtin_add(Object *list) {
         elements = elements->value.pair[1];
     }
 
-    Object *result = (Object*)calloc(1, sizeof(Object));
+    Object *result = (Object *)calloc(1, sizeof(Object));
     result->type = OBJECT_FIXNUM;
     result->value.fixnum = res;
 
     return result;
 }
 
-Object* builtin_sub_neg(Object *list) {
-    int len = list_len(list);
+Object *builtin_sub_neg(Expression *call_exp, Object **env) {
+    int len = call_exp->statement->call_expr.num_args;
     if (len < 1) {
         return NULL;
     }
 
-    if (len == 1) {
-        Object *elem = list_index_get(list, 0);
+    if (len == 1) { // negation
+        Object *elem = eval_ast(call_exp->statement->call_expr.args[0], env);
         if (elem->type != OBJECT_FIXNUM) {
             return NULL;
         }
 
         fixnum res = elem->value.fixnum * -1;
-        Object *result = (Object*)calloc(1, sizeof(Object));
+        Object *result = (Object *)calloc(1, sizeof(Object));
         result->type = OBJECT_FIXNUM;
         result->value.fixnum = res;
 
         return result;
     }
 
-    Object *elem = list_index_get(list, 0);
+    Object *elem = eval_ast(call_exp->statement->call_expr.args[0], env);
     if (elem->type != OBJECT_FIXNUM) {
         return NULL;
     }
     fixnum res = elem->value.fixnum;
-    
-    Object *elements = list_index(list, 1);
-    while (elements->type == OBJECT_PAIR) {
-        Object *element = elements->value.pair[0];
+
+    for (int i = 1; i < call_exp->statement->call_expr.num_args; i++){
+        Object *element = eval_ast(call_exp->statement->call_expr.args[i], env);
         if (element->type != OBJECT_FIXNUM) {
             return NULL;
         }
@@ -457,14 +503,14 @@ Object* builtin_sub_neg(Object *list) {
         elements = elements->value.pair[1];
     }
 
-    Object *result = (Object*)calloc(1, sizeof(Object));
+    Object *result = (Object *)calloc(1, sizeof(Object));
     result->type = OBJECT_FIXNUM;
     result->value.fixnum = res;
 
     return result;
 }
 
-Object* builtin_mul(Object *list) {
+Object *builtin_mul(Expression *call_exp, Object **env) {
     if (list_len(list) < 2) {
         return NULL;
     }
@@ -481,33 +527,33 @@ Object* builtin_mul(Object *list) {
         elements = elements->value.pair[1];
     }
 
-    Object *result = (Object*)calloc(1, sizeof(Object));
+    Object *result = (Object *)calloc(1, sizeof(Object));
     result->type = OBJECT_FIXNUM;
     result->value.fixnum = res;
 
     return result;
 }
 
-Object* builtin_quote(Object *list) {
-      if (list_len(list) != 1) {
-        return NULL;
-      }
-
-      Object *obj = list_index_get(list, 0);
-      obj->quoted = true;
-
-      return obj;
-}
-
-Object* builtin_atom(Object *list){
+Object *builtin_quote(Expression *call_exp, Object **env) {
     if (list_len(list) != 1) {
         return NULL;
     }
-    
+
+    Object *obj = list_index_get(list, 0);
+    obj->quoted = true;
+
+    return obj;
+}
+
+Object *builtin_atom(Expression *call_exp, Object **env) {
+    if (list_len(list) != 1) {
+        return NULL;
+    }
+
     Object *inner_elem = list_index_get(list, 0);
-    Object *ret = (Object*)calloc(1, sizeof(Object));
+    Object *ret = (Object *)calloc(1, sizeof(Object));
     ret->type = OBJECT_BOOLEAN;
-    
+
     if (is_object_list(inner_elem)) {
         ret->value.boolean = false;
     } else {
@@ -517,26 +563,26 @@ Object* builtin_atom(Object *list){
     return ret;
 }
 
-Object* builtin_eq(Object *list){
+Object *builtin_eq(Expression *call_exp, Object **env) {
     if (list_len(list) != 2) {
         return NULL;
     }
 
     Object *obj1 = list_index_get(list, 0);
     Object *obj2 = list_index_get(list, 1);
-    
-    Object *res = (Object*)calloc(1, sizeof(Object));
+
+    Object *res = (Object *)calloc(1, sizeof(Object));
     res->type = OBJECT_BOOLEAN;
     res->value.boolean = obj1 == obj2;
 
     return res;
 }
 
-Object* builtin_cdr(Object *list){
+Object *builtin_cdr(Expression *call_exp, Object **env) {
     if (list_len(list) != 1) {
         return NULL;
     }
-    
+
     Object *inner_list = list_index_get(list, 0);
     if (inner_list->type != OBJECT_PAIR) {
         return NULL;
@@ -545,10 +591,10 @@ Object* builtin_cdr(Object *list){
     return list_index_get(inner_list, 0);
 }
 
-Object* builtin_car(Object *list){
+Object *builtin_car(Expression *call_exp, Object **env) {
     if (list_len(list) != 1) {
         return NULL;
-    }  
+    }
 
     Object *inner_list = list_index_get(list, 0);
     if (inner_list->type != OBJECT_PAIR) {
@@ -558,12 +604,12 @@ Object* builtin_car(Object *list){
     return list_index(inner_list, 1);
 }
 
-Object* builtin_cons(Object *list){
+Object *builtin_cons(Expression *call_exp, Object **env) {
     if (list_len(list) != 2) {
         return NULL;
-    }  
+    }
 
-    Object *obj = (Object*)calloc(1, sizeof(Object));
+    Object *obj = (Object *)calloc(1, sizeof(Object));
     obj->type = OBJECT_PAIR;
     obj->value.pair[0] = list_index_get(list, 0);
     obj->value.pair[1] = list_index_get(list, 1);
@@ -571,10 +617,10 @@ Object* builtin_cons(Object *list){
     return obj;
 }
 
-Object* builtin_cond(Object *list, Object **env){
+Object *builtin_cond(Expression *call_exp, Object **env) {
     if (list_len(list) < 1) {
         return NULL;
-    }  
+    }
 
     Object *pairs = list;
     while (pairs->type == OBJECT_PAIR) {
@@ -592,7 +638,8 @@ Object* builtin_cond(Object *list, Object **env){
         }
 
         if (condition->value.boolean) {
-            return eval_sexpression(list_index_get(pair, 1), env);;
+            return eval_sexpression(list_index_get(pair, 1), env);
+            ;
         }
 
         pairs = pairs->value.pair[1];
@@ -602,77 +649,102 @@ Object* builtin_cond(Object *list, Object **env){
 }
 
 // We guarantee that objects coming in are in cons list format
-Object* eval_all(Object *obj, Object **env) {
-    Object *p = obj;
-    while (p->type != OBJECT_NIL) {
-        p->value.pair[0] = eval_sexpression(p->value.pair[0], env);
-        p = p->value.pair[1];
-    }
+// Object *eval_all(Expression *exps, Object **env) {
+//     Object *p = obj;
+//     while (p->type != OBJECT_NIL) {
+//         p->value.pair[0] = eval_sexpression(p->value.pair[0], env);
+//         p = p->value.pair[1];
+//     }
 
-    return obj;
-}
+//     return obj;
+// }
 
-Object* eval_sexpression(Object *obj, Object **env) {
+Object *eval_ast(Expression *exp, Object **env) {
     /*
     Evaluate based on type
 
-    Some types are directly self-resolving (meaning we know exactly what we 
+    Some types are directly self-resolving (meaning we know exactly what we
     need to do with them without any processing)
 
     Some other types like lists, we need to do additional parsing on top to know whether we need to
     evaluate a built-in function, a lambda, or simply just print out a list.
     */
 
-    switch (obj->type) {
-    case OBJECT_FIXNUM: // fallthrough
-    case OBJECT_BOOLEAN: // fallthrough
-    case OBJECT_NIL:
-        return obj;
-    case OBJECT_SYMBOL: // symbol search
-        printf("DEBUG: THIS IS THE MEM ADDRESS FOR SYMBOL [%s] => %p\n", obj->value.symbol, obj);
-        // TODO: add quoted flag check
-        if (obj->quoted) {
-            return obj;
+    /*
+    EXPR_IF,
+    EXPR_AND,
+    EXPR_OR,
+    EXPR_CALL,
+    EXPR_DEF
+
+    */
+    switch (exp->type) {
+    case EXPR_LITERAL:
+        return exp->statement->literal_expr;
+    case EXPR_VAR: // symbol search
+        Object *res = env_search(env, exp->statement->var_expr.name);
+        return res; // TODO: tbf i dont think this behaviour is good, might need to change the NULL
+                    // default behaviour
+    case EXPR_IF:
+        Object *cond = eval_ast(exp->statement->if_expr.cond, env);
+
+        // Check cond type
+        if (cond->type != OBJECT_BOOLEAN) {
+            return NULL; // TODO: determine behaviour
         }
 
-        Object *res = env_search(env, obj);
-        return res; // TODO: tbf i dont think this behaviour is good
-    case OBJECT_PAIR:
-        // Actual case where the OBJECT_PAIR really is a pair => just print "car" and "cdr"
-        if (!is_object_list(obj)) {
-            return obj;
+        return cond->value.boolean ? eval_ast(exp->statement->if_expr.left, env)
+                                   : eval_ast(exp->statement->if_expr.right, env);
+    case EXPR_AND:
+        Object *left = eval_ast(exp->statement->and_expr.left, env);
+        Object *right = eval_ast(exp->statement->and_expr.right, env);
+
+        if (left->type != OBJECT_BOOLEAN || right->type != OBJECT_BOOLEAN) {
+            return NULL;
         }
 
-        if (obj->quoted) {
-            return obj;
-        }
-        
-        // TODO: change to eval-apply pattern
-        Object* first = list_index_get(obj, 0);
-        if (first->type != OBJECT_SYMBOL) {
-            return obj;
+        Object *ret = (Object *)calloc(1, sizeof(Object));
+        ret->type = OBJECT_BOOLEAN;
+        ret->value.boolean = left->value.boolean && right->value.boolean;
+
+        return ret;
+    case EXPR_OR:
+        Object *left = eval_ast(exp->statement->and_expr.left, env);
+        Object *right = eval_ast(exp->statement->and_expr.right, env);
+
+        if (left->type != OBJECT_BOOLEAN || right->type != OBJECT_BOOLEAN) {
+            return NULL;
         }
 
-        // Special functions
-        if (is_built_in(first, "val")) {
-            return builtin_val(list_index(obj, 1), env);
-        } else if (is_built_in(first, "quote")) {
-            return builtin_quote(list_index(obj, 1));
-        } else if (is_built_in(first, "cond")) {
-            return builtin_cond(list_index(obj, 1), env); // TODO
-        }
+        Object *ret = (Object *)calloc(1, sizeof(Object));
+        ret->type = OBJECT_BOOLEAN;
+        ret->value.boolean = left->value.boolean || right->value.boolean;
 
-        // Generic functions: pre-evaluate all arguments
-        return apply_func(first->value.symbol, eval_all(list_index(obj, 1), env));
+        return ret;
+    case EXPR_DEF:
+        Def_Expression *def_exp = exp->statement->def_expr;
+        switch (def_exp->type) {
+        case EXPR_VAL:
+            Object *key = (Object *)calloc(1, sizeof(Object));
+            ret->type = OBJECT_SYMBOL;
+            ret->value.symbol = def_exp->statement->val_expr.name;
+
+            bool success = env_put(env, key, eval_ast(def_exp->statement->val_expr.assign_value, env));
+            // TODO: check success?
+            break;
+        }
+        break;
+    case EXPR_CALL:
+        return apply_func(exp->statement->call_expr.name, exp->statement->call_expr.args);
     }
 
     return NULL;
 }
 
-Object* apply_func(symbol func_name, Object *args) {
+Object *apply_func(Expression *call_exp, Object **env) {
     for (int i = 0; builtin[i] != NULL; i++) {
-        if (strcmp(builtin[i]->name, func_name) == 0) {
-            return builtin[i]->func(args);
+        if (strcmp(builtin[i]->name, call_exp->statement->call_expr.name) == 0) {
+            return builtin[i]->func(call_exp, env); // TODO: need to fix all builtin function calls!!!
         }
     }
 
@@ -681,11 +753,14 @@ Object* apply_func(symbol func_name, Object *args) {
 
 int eval(char *buffer, Object **env, Object **pool) {
     // TODO: need AST parser???
-    Object *obj = (Object*)calloc(1, sizeof(Object));
+    Object *obj = (Object *)calloc(1, sizeof(Object));
 
     buffer = parse_sexpression(&obj, buffer, pool); // parse object from buffer
-    
-    Object *eval_obj = eval_sexpression(obj, env); // evaluate object
+
+    // TODO: build into AST
+    Expression *ast_expr = build_ast(obj);
+
+    Object *eval_obj = eval_ast(ast_expr, env); // evaluate object
 
     print_sexpression(eval_obj); // print object
     printf("\n");

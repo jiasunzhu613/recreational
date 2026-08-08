@@ -1,16 +1,16 @@
 #include "repl.h"
 
-// TODO: right now there are for sure memory leaks because we dont free mallocs for list and symbol 
+// TODO: right now there are for sure memory leaks because we dont free mallocs for list and symbol
 int main() {
     char *buffer = NULL;
     size_t size = 0;
 
     // TODO: update these to hashmaps or something better later!
-    Object *env = (Object*)calloc(1, sizeof(Object));
+    Object *env = (Object *)calloc(1, sizeof(Object));
     env->type = OBJECT_NIL;
     env->value.nil = NULL;
 
-    Object *pool = (Object*)calloc(1, sizeof(Object));
+    Object *pool = (Object *)calloc(1, sizeof(Object));
     env->type = OBJECT_NIL;
     env->value.nil = NULL;
 
@@ -24,7 +24,7 @@ int main() {
             printf("\n");
             return 0;
         }
-        
+
         int error = eval(buffer, &env, &pool);
         if (error) {
             return error;

@@ -4,7 +4,7 @@ int main() {
     // Object *env = (Object*)calloc(1, sizeof(Object));
     // env->type = OBJECT_NIL;
     // env->value.nil = NULL;
-    
+
     // Object key = {};
     // key.type = OBJECT_SYMBOL;
     // key.value.symbol = "x";
