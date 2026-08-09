@@ -41,11 +41,9 @@ bool env_put(Object **env, Object *key, Object *value) {
     return true;
 }
 
-Object *env_search(Object **env, Object *key) {
+Object *env_search(Object **env, symbol key) {
     // TODO: need some way to compare the value of key which will be a symbol and what is in the
     // env, compare strings, strcmp key should never be a non-symbol
-    assert(key->type == OBJECT_SYMBOL); // TODO: maybe mark with better logging instead
-
     Object *p = *env;
 
     while (p->type != OBJECT_NIL) {
@@ -60,7 +58,7 @@ Object *env_search(Object **env, Object *key) {
             exit(1);
         }
 
-        if (strcmp(entry_key->value.symbol, key->value.symbol) == 0) {
+        if (strcmp(entry_key->value.symbol, key) == 0) {
             printf("DEBUG: FOUND MATCHING KEYS\n");
             printf("DEBUG: RETURING ");
             print_sexpression(entry->value.pair[1]);
@@ -302,7 +300,10 @@ char *parse_sexpression(Object **obj, char *buffer, Object **pool) {
     } else if (*p == '\'') { // TODO: handle explicit pair construction
         p++;                 // increment to get rid of '
         p = parse_sexpression(obj, p, pool);
-        (*obj)->quoted = true;
+        Object *quoted = (Object*)calloc(1, sizeof(Object));
+        quoted->type = OBJECT_QUOTE;
+        quoted->value.quote = *obj;
+        *obj = quoted;
     } else {
         p = parse_symbol(obj, p, pool); // we will have nil as a special case in parsing a symbol
     }
@@ -317,22 +318,17 @@ Expression *build_ast(Object *obj) {
     switch (obj->type) {
     case OBJECT_NIL:    // fallthrough
     case OBJECT_FIXNUM: // fallthrough
+    case OBJECT_QUOTE: // fallthrough
     case OBJECT_BOOLEAN:
         expression->type = EXPR_LITERAL;
         expression->statement->literal_expr = obj;
         break;
     case OBJECT_SYMBOL:
-        if (obj->quoted) {
-            expression->type = EXPR_LITERAL;
-            expression->statement->literal_expr = obj;
-            break;
-        }
-
         expression->type = EXPR_VAR;
         expression->statement->var_expr = (Var){.name = obj->value.symbol};
         break;
     case OBJECT_PAIR:
-        if (!is_object_list(obj) || obj->quoted) {
+        if (!is_object_list(obj)) {
             expression->type = EXPR_LITERAL;
             expression->statement->literal_expr = obj;
             break;
@@ -357,7 +353,7 @@ Expression *build_ast(Object *obj) {
             expression->statement->or_expr.right = build_ast(list_index_get(obj, 2));
         } else if (strcmp(first->value.symbol, VAL) == 0) {
             expression->type = EXPR_DEF;
-            Def_Expression *def_expr = expression->statement->def_expr;
+            Def_Expression *def_expr = expression->statement->def_expr; // TODO: this need another calloc
             Object *name = list_index_get(obj, 1);
             Object *value = list_index_get(obj, 2);
 
@@ -369,10 +365,9 @@ Expression *build_ast(Object *obj) {
             // TODO: need to check types
             expression->type = EXPR_CALL;
             expression->statement->call_expr.name = first->value.symbol;
-            // TODO: build inner element into AST
-            // buid into fixed sized call args array
-            Expression **args = (Expression **)calloc(list_len(obj) - 1, sizeof(Expression*));
-            Object *args_object = list_index_get(obj, 1);
+
+            Expression **args = (Expression **)calloc(list_len(obj), sizeof(Expression*));
+            Object *args_object = list_index(obj, 1);
 
             // Build all list elements into array of AST expressions
 
@@ -422,6 +417,9 @@ void print_sexpression(Object *obj) {
         break;
     case OBJECT_NIL:
         printf("nil");
+        break;
+    case OBJECT_QUOTE:
+        print_sexpression(obj->value.quote);
         break;
     case OBJECT_PAIR:
         // Check if pair construction looks like list construction
@@ -537,10 +535,13 @@ Object *builtin_quote(Expression *call_exp, Object **env) {
         return NULL;
     }
 
+    // TODO: this needs to be changed
     Object *obj = eval_ast(call_exp->statement->call_expr.args[0], env);
-    obj->quoted = true;
+    Object *quoted = (Object*)calloc(1, sizeof(Object));
+    quoted->type = OBJECT_QUOTE;
+    quoted->value.quote = obj;
 
-    return obj;
+    return quoted;
 }
 
 Object *builtin_atom(Expression *call_exp, Object **env) {
@@ -729,6 +730,7 @@ Object *eval_ast(Expression *exp, Object **env) {
 Object *apply_func(Expression *call_exp, Object **env) {
     for (int i = 0; builtin[i] != NULL; i++) {
         if (strcmp(builtin[i]->name, call_exp->statement->call_expr.name) == 0) {
+            printf("DEBUG: FOUND FUNCTION!!!\n");
             return builtin[i]->func(call_exp, env); // TODO: need to fix all builtin function calls!!!
         }
     }

@@ -34,6 +34,7 @@ enum Object_Type { // TODO: add double and string?
     OBJECT_BOOLEAN,
     OBJECT_SYMBOL,
     OBJECT_PAIR,
+    OBJECT_QUOTE,
 };
 
 union Object_Value {
@@ -42,12 +43,12 @@ union Object_Value {
     char *symbol;
     struct Object *nil;     // might not be needed?
     struct Object *pair[2]; // struct Object* is able to compile because pointer have fixed size
+    struct Object *quote;
 };
 
 struct Object {
     Object_Type type;
     Object_Value value;
-    bool quoted;
 };
 
 struct Function {
@@ -87,7 +88,7 @@ struct Or {
 // Function call for closures
 struct Call {
     symbol name;
-    Expression **args;
+    Expression **args; // TODO: i feel like Object * is better here...
     int num_args;
 };
 
