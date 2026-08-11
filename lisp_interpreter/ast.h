@@ -1,17 +1,10 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef AST_H
+#define AST_H
 
-#include <stdbool.h> // for bool
-#include <stdint.h>  // for int64_t et al.
+#include <stdlib.h>
 
-typedef int64_t fixnum;
-typedef bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
-typedef char *symbol;
-
-typedef union Object_Value Object_Value;
-typedef enum Object_Type Object_Type;
-typedef struct Object Object;
-typedef struct Function Function;
+#include "object.h"
+#include "object_helpers.h"
 
 typedef Object Value;                 // Self-resolving object types
 typedef struct Expression Expression; // Expression tagged union
@@ -28,35 +21,6 @@ typedef struct Val Val;
 typedef struct Def_Expression Def_Expression;
 typedef enum Def_Expression_Type Def_Expression_Type;
 typedef union Def_Expression_Statement Def_Expression_Statement;
-
-enum Object_Type { // TODO: add double and string?
-    OBJECT_NIL,
-    OBJECT_FIXNUM,
-    OBJECT_BOOLEAN,
-    OBJECT_SYMBOL,
-    OBJECT_PAIR,
-    OBJECT_QUOTE,
-};
-
-union Object_Value {
-    int64_t fixnum;
-    bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
-    char *symbol;
-    struct Object *nil;     // might not be needed?
-    struct Object *pair[2]; // struct Object* is able to compile because pointer have fixed size
-    struct Object *quote;
-};
-
-struct Object {
-    Object_Type type;
-    Object_Value value;
-};
-
-struct Function {
-    symbol name;
-    Object *(*func)(Expression*, Object**);
-    // int num_args;
-};
 
 enum Expression_Type { EXPR_LITERAL, EXPR_IF, EXPR_VAR, EXPR_AND, EXPR_OR, EXPR_QUOTE, EXPR_CALL, EXPR_DEF };
 
@@ -128,4 +92,7 @@ struct Expression {
     Expression_Statement *statement;
 };
 
-#endif // TYPES_H
+// AST Functions
+Expression *build_ast(Object *obj);
+
+#endif // AST_H

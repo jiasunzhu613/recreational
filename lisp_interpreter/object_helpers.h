@@ -1,0 +1,31 @@
+#ifndef OBJECT_HELPERS_H
+#define OBJECT_HELPERS_H
+
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "object.h"
+
+// Environment
+bool env_put(Object **env, Object *key,
+             Object *value);                  // then we must create entry out of key and value
+Object *env_search(Object **env, symbol key); // returns Object* which represents the value in env
+
+// Intern object pooling
+// TODO: try to merge intern pool and environment functions into one common interface
+Object *pool_put(Object **pool, symbol sym);
+Object *pool_search(Object **pool, symbol sym);
+
+// List-specific Helpers
+bool is_object_list(Object *obj);
+int list_len(Object *list);
+Object *list_index(Object *list, int ind);
+Object *list_index_get(Object *list, int ind);
+
+// Printing
+void print_list(Object *obj);
+void print_sexpression(Object *obj);
+
+#endif // OBJECT_HELPERS_H

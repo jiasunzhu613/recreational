@@ -1,7 +1,14 @@
 #ifndef BUILTIN_H
 #define BUILTIN_H
 
-#include "types.h"
+#include "object.h"
+#include "ast.h"
+
+struct Function {
+    symbol name;
+    Object *(*func)(Expression*, Object**);
+    // int num_args;
+};
 
 // Builtin Lisp Functions
 // TODO: add a function mapping?s

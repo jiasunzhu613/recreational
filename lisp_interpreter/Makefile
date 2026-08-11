@@ -2,14 +2,16 @@ FORMAT_FILES := main.c repl.c repl.h test.c
 
 .PHONY: format format-check
 
-main: repl.h repl.c main.c
-	gcc -o main.out main.c repl.c
+CC := gcc
 
-debug: repl.h repl.c main.c
-	gcc -g -o debug.out main.c repl.c
+main: repl.h repl.c main.c ast.c parser.c object_helpers.c
+	CC -o main.out main.c repl.c ast.c parser.c object_helpers.c
 
-test: repl.h repl.c test.c
-	gcc -o test.out test.c repl.c
+debug: repl.h repl.c main.c ast.c parser.c
+	CC -g -o debug.out main.c repl.c ast.c parser.c
+
+test: repl.h repl.c test.c ast.c parser.c
+	CC -o test.out test.c repl.c ast.c parser.c
 
 format:
 	clang-format -i $(FORMAT_FILES)
