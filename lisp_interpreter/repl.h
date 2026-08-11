@@ -8,8 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "types.h"
 #include "builtin.h"
+#include "types.h"
 
 // Primitive Function Names
 #define NIL "nil"
@@ -21,7 +21,7 @@
 
 // Environment
 bool env_put(Object **env, Object *key,
-             Object *value);                   // then we must create entry out of key and value
+             Object *value);                  // then we must create entry out of key and value
 Object *env_search(Object **env, symbol key); // returns Object* which represents the value in env
 
 // Intern object pooling

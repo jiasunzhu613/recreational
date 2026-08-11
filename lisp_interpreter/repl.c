@@ -12,16 +12,15 @@ Recreational programming session referencing:
 
 // NOTE: {} syntax provides the data, but we
 // still need to cast to Function type!
-Function *builtin[] = {
-    &(Function){.name = "+", .func = builtin_add},
-    &(Function){.name = "-", .func = builtin_sub_neg},
-    &(Function){.name = "*", .func = builtin_mul},
-    &(Function){.name = "atom", .func = builtin_atom},
-    &(Function){.name = "cdr", .func = builtin_cdr},
-    &(Function){.name = "car", .func = builtin_car},
-    &(Function){.name = "cons", .func = builtin_cons},
-    &(Function){.name = "eq", .func = builtin_eq},
-    NULL};
+Function *builtin[] = {&(Function){.name = "+", .func = builtin_add},
+                       &(Function){.name = "-", .func = builtin_sub_neg},
+                       &(Function){.name = "*", .func = builtin_mul},
+                       &(Function){.name = "atom", .func = builtin_atom},
+                       &(Function){.name = "cdr", .func = builtin_cdr},
+                       &(Function){.name = "car", .func = builtin_car},
+                       &(Function){.name = "cons", .func = builtin_cons},
+                       &(Function){.name = "eq", .func = builtin_eq},
+                       NULL};
 
 bool env_put(Object **env, Object *key, Object *value) {
     // always pair up
@@ -300,7 +299,7 @@ char *parse_sexpression(Object **obj, char *buffer, Object **pool) {
     } else if (*p == '\'') { // TODO: handle explicit pair construction
         p++;                 // increment to get rid of '
         p = parse_sexpression(obj, p, pool);
-        Object *quoted = (Object*)calloc(1, sizeof(Object));
+        Object *quoted = (Object *)calloc(1, sizeof(Object));
         quoted->type = OBJECT_QUOTE;
         quoted->value.quote = *obj;
         *obj = quoted;
@@ -318,7 +317,7 @@ Expression *build_ast(Object *obj) {
     switch (obj->type) {
     case OBJECT_NIL:    // fallthrough
     case OBJECT_FIXNUM: // fallthrough
-    case OBJECT_QUOTE: // fallthrough
+    case OBJECT_QUOTE:  // fallthrough
     case OBJECT_BOOLEAN:
         expression->type = EXPR_LITERAL;
         expression->statement->literal_expr = obj;
@@ -354,7 +353,7 @@ Expression *build_ast(Object *obj) {
             expression->statement->or_expr.right = build_ast(list_index_get(obj, 2));
         } else if (strcmp(first->value.symbol, QUOTE) == 0) {
             // build object into a quote object first then build_ast with quoted object
-            Object *quoted = (Object*)calloc(1, sizeof(Object));
+            Object *quoted = (Object *)calloc(1, sizeof(Object));
             quoted->type = OBJECT_QUOTE;
             quoted->value.quote = list_index_get(obj, 1);
 
@@ -362,8 +361,9 @@ Expression *build_ast(Object *obj) {
             expression->statement->quote_expr.value = build_ast(quoted);
         } else if (strcmp(first->value.symbol, VAL) == 0) {
             expression->type = EXPR_DEF;
-            Def_Expression *def_expr = (Def_Expression*)calloc(1, sizeof(Def_Expression));
-            def_expr->statement = (Def_Expression_Statement*)calloc(1, sizeof(Def_Expression_Statement));
+            Def_Expression *def_expr = (Def_Expression *)calloc(1, sizeof(Def_Expression));
+            def_expr->statement =
+                (Def_Expression_Statement *)calloc(1, sizeof(Def_Expression_Statement));
             Object *name = list_index_get(obj, 1);
             Object *value = list_index_get(obj, 2);
 
@@ -378,7 +378,7 @@ Expression *build_ast(Object *obj) {
             expression->type = EXPR_CALL;
             expression->statement->call_expr.name = first->value.symbol;
 
-            Expression **args = (Expression **)calloc(list_len(obj), sizeof(Expression*));
+            Expression **args = (Expression **)calloc(list_len(obj), sizeof(Expression *));
             Object *args_object = list_index(obj, 1);
 
             // Build all list elements into array of AST expressions
@@ -694,7 +694,7 @@ Object *eval_ast(Expression *exp, Object **env) {
         ret->type = OBJECT_BOOLEAN;
         ret->value.boolean = left->value.boolean && right->value.boolean;
 
-        return ret; 
+        return ret;
     }
     case EXPR_OR: {
         Object *left = eval_ast(exp->statement->and_expr.left, env);
@@ -720,7 +720,8 @@ Object *eval_ast(Expression *exp, Object **env) {
             key->type = OBJECT_SYMBOL;
             key->value.symbol = def_exp->statement->val_expr.name;
 
-            bool success = env_put(env, key, eval_ast(def_exp->statement->val_expr.assign_value, env));
+            bool success =
+                env_put(env, key, eval_ast(def_exp->statement->val_expr.assign_value, env));
             // TODO: check success?
             break;
         }
@@ -736,7 +737,8 @@ Object *apply_func(Expression *call_exp, Object **env) {
     for (int i = 0; builtin[i] != NULL; i++) {
         if (strcmp(builtin[i]->name, call_exp->statement->call_expr.name) == 0) {
             printf("DEBUG: FOUND FUNCTION!!!\n");
-            return builtin[i]->func(call_exp, env); // TODO: need to fix all builtin function calls!!!
+            return builtin[i]->func(call_exp,
+                                    env); // TODO: need to fix all builtin function calls!!!
         }
     }
 
