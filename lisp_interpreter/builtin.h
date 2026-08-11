@@ -15,7 +15,7 @@ Object *builtin_eq(Expression *call_exp, Object **env);    // (eq a b) => compar
 Object *builtin_cdr(Expression *call_exp, Object **env);   // (cdr list) => returns left side of a cons cell
 Object *builtin_car(Expression *call_exp, Object **env);   // (car list) => returns remaining pair of list
 Object *builtin_cons(Expression *call_exp, Object **env);  // (cons a b) => constructs cons cell from two elements
-Object *builtin_cond(Expression *call_exp,
-                     Object **env); // (cond (condition1 action1) (condition2 action2) ...)
+// Object *builtin_cond(Expression *call_exp,
+//                      Object **env); // (cond (condition1 action1) (condition2 action2) ...)
 
 #endif // BUILTIN_H

@@ -1,9 +1,12 @@
 FORMAT_FILES := main.c repl.c repl.h test.c
 
-.PHONY: main test format format-check
+.PHONY: format format-check
 
 main: repl.h repl.c main.c
 	gcc -o main.out main.c repl.c
+
+debug: repl.h repl.c main.c
+	gcc -g -o debug.out main.c repl.c
 
 test: repl.h repl.c test.c
 	gcc -o test.out test.c repl.c

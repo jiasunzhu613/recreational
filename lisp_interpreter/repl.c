@@ -120,7 +120,7 @@ char *trim_whitespace(char *buffer) {
 
 bool is_whitespace(char *buffer) {
     char c = *buffer;
-    return c == ' ' || c == '\n' || c == '\t';
+    return c == ' ' || c == '\n' || c == '\t' || c == '\0';
 }
 
 bool is_object_list(Object *obj) {
@@ -293,7 +293,7 @@ char *parse_sexpression(Object **obj, char *buffer, Object **pool) {
 
     if (*p == '#') {
         p = parse_boolean(*obj, p);
-    } else if (*p == '-' || (*p >= '0' && *p <= '9')) {
+    } else if ((*p == '-' && !is_whitespace(p + 1)) || (*p >= '0' && *p <= '9')) {
         p = parse_fixnum(*obj, p);
     } else if (*p == '(') { // TODO: handle explicit pair construction
         p = parse_pair(*obj, p, pool);
@@ -362,7 +362,8 @@ Expression *build_ast(Object *obj) {
             expression->statement->quote_expr.value = build_ast(quoted);
         } else if (strcmp(first->value.symbol, VAL) == 0) {
             expression->type = EXPR_DEF;
-            Def_Expression *def_expr = expression->statement->def_expr; // TODO: this need another calloc
+            Def_Expression *def_expr = (Def_Expression*)calloc(1, sizeof(Def_Expression));
+            def_expr->statement = (Def_Expression_Statement*)calloc(1, sizeof(Def_Expression_Statement));
             Object *name = list_index_get(obj, 1);
             Object *value = list_index_get(obj, 2);
 
@@ -370,8 +371,10 @@ Expression *build_ast(Object *obj) {
             def_expr->type = EXPR_VAL;
             def_expr->statement->val_expr.name = name->value.symbol;
             def_expr->statement->val_expr.assign_value = build_ast(value);
+            expression->statement->def_expr = def_expr;
         } else {
             // TODO: need to check types
+            printf("DEBUG: IN BUILT AST, GOT: %s\n", first->value.symbol);
             expression->type = EXPR_CALL;
             expression->statement->call_expr.name = first->value.symbol;
 
@@ -587,6 +590,7 @@ Object *builtin_car(Expression *call_exp, Object **env) {
     }
 
     Object *inner_list = eval_ast(call_exp->statement->call_expr.args[0], env);
+    printf("DEBUG: TYPE OF INNERLIST: %d\n", inner_list->type);
     if (inner_list->type != OBJECT_PAIR) {
         return NULL;
     }
@@ -608,32 +612,32 @@ Object *builtin_cons(Expression *call_exp, Object **env) {
 }
 
 // TODO: this need to have special handling
-Object *builtin_cond(Expression *call_exp, Object **env) {
-    if (call_exp->statement->call_expr.num_args < 1) {
-        return NULL;
-    }
+// Object *builtin_cond(Expression *call_exp, Object **env) {
+//     if (call_exp->statement->call_expr.num_args < 1) {
+//         return NULL;
+//     }
 
-    for (int i = 0; i < call_exp->statement->call_expr.num_args; i++) {
-        Object *pair = eval_ast(call_exp->statement->call_expr.args[i], env);
-        if (!is_object_list(pair)) {
-            return NULL;
-        }
-        if (list_len(pair) != 2) {
-            return NULL;
-        }
+//     for (int i = 0; i < call_exp->statement->call_expr.num_args; i++) {
+//         Object *pair = eval_ast(call_exp->statement->call_expr.args[i], env);
+//         if (!is_object_list(pair)) {
+//             return NULL;
+//         }
+//         if (list_len(pair) != 2) {
+//             return NULL;
+//         }
 
-        Object *condition = list_index_get(pair, 0);
-        if (condition->type != OBJECT_BOOLEAN) {
-            return NULL;
-        }
+//         Object *condition = list_index_get(pair, 0);
+//         if (condition->type != OBJECT_BOOLEAN) {
+//             return NULL;
+//         }
 
-        if (condition->value.boolean) {
-            return list_index_get(pair, 1);
-        }
-    }
+//         if (condition->value.boolean) {
+//             return list_index_get(pair, 1);
+//         }
+//     }
 
-    return NULL; // no condition matched
-}
+//     return NULL; // no condition matched
+// }
 
 // We guarantee that objects coming in are in cons list format
 // Object *eval_all(Expression *exps, Object **env) {
@@ -659,7 +663,11 @@ Object *eval_ast(Expression *exp, Object **env) {
 
     switch (exp->type) {
     case EXPR_LITERAL:
-        return exp->statement->literal_expr;
+        Object *literal = exp->statement->literal_expr;
+        if (literal->type == OBJECT_QUOTE) {
+            literal = literal->value.quote;
+        }
+        return literal;
     case EXPR_VAR: // symbol search
         Object *res = env_search(env, exp->statement->var_expr.name);
         return res; // TODO: tbf i dont think this behaviour is good, might need to change the NULL
