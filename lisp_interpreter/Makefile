@@ -1,20 +1,33 @@
-FORMAT_FILES := main.c repl.c repl.h test.c
+FORMAT_FILES := main.c repl.c ast.c parser.c object_helpers.c
 
-.PHONY: format format-check
+CC = gcc
+CFLAGS = -Wall -Wextra
+TARGET = main
+SRCS = repl.c ast.c parser.c object_helpers.c
+OBJS = $(SRCS:.c=.o)
 
-CC := gcc
+all: $(TARGET)
 
-main: repl.h repl.c main.c ast.c parser.c object_helpers.c
-	CC -o main.out main.c repl.c ast.c parser.c object_helpers.c
+$(TARGET): main.o $(OBJS)
+	$(CC) $(CFLAGS) -o main.out main.o $(OBJS)
 
-debug: repl.h repl.c main.c ast.c parser.c
-	CC -g -o debug.out main.c repl.c ast.c parser.c
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-test: repl.h repl.c test.c ast.c parser.c
-	CC -o test.out test.c repl.c ast.c parser.c
+debug: main.o $(OBJS)
+	$(CC) $(CFLAGS) -g -o debug.out main.o $(OBJS)
 
+test: test.o $(OBJS)
+	$(CC) $(CFLAGS) -o test.out test.o $(OBJS)
+
+.PHONY: format
 format:
 	clang-format -i $(FORMAT_FILES)
 
+.PHONY: format-check
 format-check:
 	clang-format --dry-run --Werror $(FORMAT_FILES)
+
+.PHONY: clean
+clean:
+	rm -f *.o main.out debug.out test.out
