@@ -11,14 +11,14 @@ all: $(TARGET)
 $(TARGET): main.o $(OBJS)
 	$(CC) $(CFLAGS) -o main.out main.o $(OBJS)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
 debug: main.o $(OBJS)
 	$(CC) $(CFLAGS) -g -o debug.out main.o $(OBJS)
 
 test: test.o $(OBJS)
 	$(CC) $(CFLAGS) -o test.out test.o $(OBJS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 .PHONY: format
 format:
