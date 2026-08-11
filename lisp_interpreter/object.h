@@ -1,5 +1,5 @@
-#ifndef TYPES_H
-#define TYPES_H
+#ifndef OBJECT_H
+#define OBJECT_H
 
 #include <stdbool.h> // for bool
 #include <stdint.h>  // for int64_t et al.
@@ -44,4 +44,4 @@ struct Object {
     Object_Value value;
 };
 
-#endif // TYPES_H
+#endif // OBJECT_H
