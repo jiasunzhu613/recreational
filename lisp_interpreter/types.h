@@ -21,6 +21,7 @@ typedef struct If If;
 typedef struct Var Var;
 typedef struct And And;
 typedef struct Or Or;
+typedef struct Quote Quote;
 typedef struct Apply Apply;
 typedef struct Call Call;
 typedef struct Val Val;
@@ -57,7 +58,7 @@ struct Function {
     // int num_args;
 };
 
-enum Expression_Type { EXPR_LITERAL, EXPR_IF, EXPR_VAR, EXPR_AND, EXPR_OR, EXPR_CALL, EXPR_DEF };
+enum Expression_Type { EXPR_LITERAL, EXPR_IF, EXPR_VAR, EXPR_AND, EXPR_OR, EXPR_QUOTE, EXPR_CALL, EXPR_DEF };
 
 enum Def_Expression_Type {
     EXPR_VAL,
@@ -83,6 +84,10 @@ struct And {
 struct Or {
     Expression *left;
     Expression *right; // TODO: is this enough for a recursive definition?
+};
+
+struct Quote {
+    Expression *value; // should this be Object*? maybe we just convert to literal directly in build_ast?
 };
 
 // Function call for closures
@@ -113,6 +118,7 @@ union Expression_Statement {
     Var var_expr;
     And and_expr;
     Or or_expr;
+    Quote quote_expr;
     Call call_expr;
     Def_Expression *def_expr;
 };

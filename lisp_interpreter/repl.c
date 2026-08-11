@@ -337,6 +337,7 @@ Expression *build_ast(Object *obj) {
         Object *first = list_index_get(obj, 0);
 
         // Handle definition expressions first
+        // TODO: needs lots of error handling!!
         if (strcmp(first->value.symbol, IF) == 0) {
             // TODO: error handling
             expression->type = EXPR_IF;
@@ -351,6 +352,14 @@ Expression *build_ast(Object *obj) {
             expression->type = EXPR_OR;
             expression->statement->or_expr.left = build_ast(list_index_get(obj, 1));
             expression->statement->or_expr.right = build_ast(list_index_get(obj, 2));
+        } else if (strcmp(first->value.symbol, QUOTE) == 0) {
+            // build object into a quote object first then build_ast with quoted object
+            Object *quoted = (Object*)calloc(1, sizeof(Object));
+            quoted->type = OBJECT_QUOTE;
+            quoted->value.quote = list_index_get(obj, 1);
+
+            expression->type = EXPR_QUOTE;
+            expression->statement->quote_expr.value = build_ast(quoted);
         } else if (strcmp(first->value.symbol, VAL) == 0) {
             expression->type = EXPR_DEF;
             Def_Expression *def_expr = expression->statement->def_expr; // TODO: this need another calloc
@@ -530,20 +539,6 @@ Object *builtin_mul(Expression *call_exp, Object **env) {
     return result;
 }
 
-Object *builtin_quote(Expression *call_exp, Object **env) {
-    if (call_exp->statement->call_expr.num_args != 1) {
-        return NULL;
-    }
-
-    // TODO: this needs to be changed
-    Object *obj = eval_ast(call_exp->statement->call_expr.args[0], env);
-    Object *quoted = (Object*)calloc(1, sizeof(Object));
-    quoted->type = OBJECT_QUOTE;
-    quoted->value.quote = obj;
-
-    return quoted;
-}
-
 Object *builtin_atom(Expression *call_exp, Object **env) {
     if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
@@ -707,6 +702,8 @@ Object *eval_ast(Expression *exp, Object **env) {
 
         return ret;
     }
+    case EXPR_QUOTE:
+        return eval_ast(exp->statement->quote_expr.value, env);
     case EXPR_DEF:
         Def_Expression *def_exp = exp->statement->def_expr;
         switch (def_exp->type) {

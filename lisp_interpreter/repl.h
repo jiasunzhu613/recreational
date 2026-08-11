@@ -16,6 +16,7 @@
 #define IF "if"
 #define AND "and"
 #define OR "or"
+#define QUOTE "quote"
 #define VAL "val"
 
 // Environment

@@ -9,7 +9,6 @@ Object *builtin_add(Expression *call_exp, Object **env);
 Object *builtin_sub_neg(Expression *call_exp, Object **env); // if 1 argument, return negation, else, subtract values in sequence
 Object *builtin_mul(Expression *call_exp, Object **env);
 
-Object *builtin_quote(Expression *call_exp, Object **env); // (quote (a b c)) or '(a b c)
 Object *builtin_atom(Expression *call_exp, Object **env);  // (atom x)
 Object *builtin_eq(Expression *call_exp, Object **env);    // (eq a b) => compares if atoms are equivalent or if memory
                                      // addresses are the same
