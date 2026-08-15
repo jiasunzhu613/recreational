@@ -14,7 +14,7 @@ Recreational programming session referencing:
 // still need to cast to Function type!
 Function *builtin[] = {&(Function){.name = "+", .func = builtin_add},
                        &(Function){.name = "-", .func = builtin_sub_neg},
-                       &(Function){.name = "*", .func = builtin_mul},
+                       &(Function){.name = "*", .func = builtin_mul}, // TODO: division?
                        &(Function){.name = "atom", .func = builtin_atom},
                        &(Function){.name = "cdr", .func = builtin_cdr},
                        &(Function){.name = "car", .func = builtin_car},
@@ -45,7 +45,7 @@ bool is_one_of_built_in(Object *first) {
 // BUILTIN Functions
 // TODO: find a way to move these out?
 
-Object *builtin_add(Expression *call_exp, Object **env) {
+Object *builtin_add(Expression *call_exp, Env *env) {
     if (call_exp->statement->call_expr.num_args < 2) {
         return NULL;
     }
@@ -67,7 +67,7 @@ Object *builtin_add(Expression *call_exp, Object **env) {
     return result;
 }
 
-Object *builtin_sub_neg(Expression *call_exp, Object **env) {
+Object *builtin_sub_neg(Expression *call_exp, Env *env) {
     int len = call_exp->statement->call_expr.num_args;
     if (len < 1) {
         return NULL;
@@ -109,7 +109,7 @@ Object *builtin_sub_neg(Expression *call_exp, Object **env) {
     return result;
 }
 
-Object *builtin_mul(Expression *call_exp, Object **env) {
+Object *builtin_mul(Expression *call_exp, Env *env) {
     int len = call_exp->statement->call_expr.num_args;
     if (len < 2) {
         return NULL;
@@ -132,7 +132,7 @@ Object *builtin_mul(Expression *call_exp, Object **env) {
     return result;
 }
 
-Object *builtin_atom(Expression *call_exp, Object **env) {
+Object *builtin_atom(Expression *call_exp, Env *env) {
     if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
     }
@@ -146,7 +146,7 @@ Object *builtin_atom(Expression *call_exp, Object **env) {
     return ret;
 }
 
-Object *builtin_eq(Expression *call_exp, Object **env) {
+Object *builtin_eq(Expression *call_exp, Env *env) {
     if (call_exp->statement->call_expr.num_args != 2) {
         return NULL;
     }
@@ -161,7 +161,7 @@ Object *builtin_eq(Expression *call_exp, Object **env) {
     return res;
 }
 
-Object *builtin_cdr(Expression *call_exp, Object **env) {
+Object *builtin_cdr(Expression *call_exp, Env *env) {
     if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
     }
@@ -174,7 +174,7 @@ Object *builtin_cdr(Expression *call_exp, Object **env) {
     return inner_list->value.pair[1];
 }
 
-Object *builtin_car(Expression *call_exp, Object **env) {
+Object *builtin_car(Expression *call_exp, Env *env) {
     if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
     }
@@ -188,7 +188,7 @@ Object *builtin_car(Expression *call_exp, Object **env) {
     return inner_list->value.pair[0];
 }
 
-Object *builtin_cons(Expression *call_exp, Object **env) {
+Object *builtin_cons(Expression *call_exp, Env *env) {
     if (call_exp->statement->call_expr.num_args != 2) {
         return NULL;
     }
@@ -202,7 +202,7 @@ Object *builtin_cons(Expression *call_exp, Object **env) {
 }
 
 // TODO: this need to have special handling
-// Object *builtin_cond(Expression *call_exp, Object **env) {
+// Object *builtin_cond(Expression *call_exp, Env *env) {
 //     if (call_exp->statement->call_expr.num_args < 1) {
 //         return NULL;
 //     }
@@ -230,7 +230,7 @@ Object *builtin_cons(Expression *call_exp, Object **env) {
 // }
 
 // We guarantee that objects coming in are in cons list format
-// Object *eval_all(Expression *exps, Object **env) {
+// Object *eval_all(Expression *exps, Env *env) {
 //     Object *p = obj;
 //     while (p->type != OBJECT_NIL) {
 //         p->value.pair[0] = eval_sexpression(p->value.pair[0], env);
@@ -240,7 +240,7 @@ Object *builtin_cons(Expression *call_exp, Object **env) {
 //     return obj;
 // }
 
-Object *eval_ast(Expression *exp, Object **env) {
+Object *eval_ast(Expression *exp, Env *env) {
     /*
     Evaluate based on type
 
@@ -314,6 +314,8 @@ Object *eval_ast(Expression *exp, Object **env) {
                 env_put(env, key, eval_ast(def_exp->statement->val_expr.assign_value, env));
             // TODO: check success?
             break;
+        case EXPR_DEFUN: // TODO
+            break;
         }
         break;
     case EXPR_CALL:
@@ -323,7 +325,7 @@ Object *eval_ast(Expression *exp, Object **env) {
     return NULL;
 }
 
-Object *apply_func(Expression *call_exp, Object **env) {
+Object *apply_func(Expression *call_exp, Env *env) {
     for (int i = 0; builtin[i] != NULL; i++) {
         if (strcmp(builtin[i]->name, call_exp->statement->call_expr.name) == 0) {
             printf("DEBUG: FOUND FUNCTION!!!\n");
@@ -335,7 +337,7 @@ Object *apply_func(Expression *call_exp, Object **env) {
     return NULL;
 }
 
-int eval(char *buffer, Object **env, Object **pool) {
+int eval(char *buffer, Env *env, Object **pool) {
     // TODO: need AST parser???
     Object *obj = (Object *)calloc(1, sizeof(Object));
 

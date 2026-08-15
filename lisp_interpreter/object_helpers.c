@@ -1,27 +1,27 @@
 #include "object_helpers.h"
 
-bool env_put(Object **env, Object *key, Object *value) {
+bool env_put(Env *env, Object *key, Object *value) {
     // always pair up
     Object *entry = (Object *)calloc(1, sizeof(Object));
     entry->type = OBJECT_PAIR;
     entry->value.pair[0] = key;
     entry->value.pair[1] = value;
 
-    Object *new_env = (Object *)calloc(1, sizeof(Object));
-    new_env->type = OBJECT_PAIR;
-    new_env->value.pair[0] = entry;
-    new_env->value.pair[1] = *env;
+    Object *new_vars_env = (Object *)calloc(1, sizeof(Object));
+    new_vars_env->type = OBJECT_PAIR;
+    new_vars_env->value.pair[0] = entry;
+    new_vars_env->value.pair[1] = env->vars;
 
-    print_sexpression(new_env);
+    print_sexpression(new_vars_env);
 
-    *env = new_env;
+    env->vars = new_vars_env;
     return true;
 }
 
-Object *env_search(Object **env, symbol key) {
+Object *env_search(Env *env, symbol key) {
     // TODO: need some way to compare the value of key which will be a symbol and what is in the
     // env, compare strings, strcmp key should never be a non-symbol
-    Object *p = *env;
+    Object *p = env->vars;
 
     while (p->type != OBJECT_NIL) {
         Object *entry =

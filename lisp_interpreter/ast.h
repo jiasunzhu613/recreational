@@ -17,16 +17,17 @@ typedef struct Or Or;
 typedef struct Quote Quote;
 typedef struct Apply Apply;
 typedef struct Call Call;
-typedef struct Val Val;
 typedef struct Def_Expression Def_Expression;
 typedef enum Def_Expression_Type Def_Expression_Type;
 typedef union Def_Expression_Statement Def_Expression_Statement;
+typedef struct Val Val;
+typedef struct Defun Defun;
 
 enum Expression_Type { EXPR_LITERAL, EXPR_IF, EXPR_VAR, EXPR_AND, EXPR_OR, EXPR_QUOTE, EXPR_CALL, EXPR_DEF };
 
 enum Def_Expression_Type {
     EXPR_VAL,
-    // EXPR_DEFINE
+    EXPR_DEFUN
 };
 
 // Operations
@@ -61,14 +62,22 @@ struct Call {
     int num_args;
 };
 
-// Function call for closures
 struct Val {
     symbol name;
     Expression *assign_value;
 };
 
+struct Defun {
+    symbol name;
+    // We will create local env for functions, and we will have array of symbols for names
+    symbol *args;
+    Expression *body; // Will use Call object to call function
+};
+
+// Function call for closures
 union Def_Expression_Statement {
     Val val_expr;
+    Defun defun_expr;
 };
 
 struct Def_Expression {

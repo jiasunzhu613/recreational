@@ -9,12 +9,23 @@
 #include "object.h"
 
 // Environment
-bool env_put(Object **env, Object *key,
+typedef struct Env Env;
+
+struct Env {
+    // for variables
+    Object *vars;
+
+    // for functions
+    Object *funcs;
+};
+
+bool env_put(Env *env, Object *key,
              Object *value);                  // then we must create entry out of key and value
-Object *env_search(Object **env, symbol key); // returns Object* which represents the value in env
+Object *env_search(Env *env, symbol key); // returns Object* which represents the value in env
 
 // Intern object pooling
 // TODO: try to merge intern pool and environment functions into one common interface
+// TODO: maybe change pool object too?
 Object *pool_put(Object **pool, symbol sym);
 Object *pool_search(Object **pool, symbol sym);
 

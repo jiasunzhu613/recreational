@@ -6,13 +6,18 @@ int main() {
     size_t size = 0;
 
     // TODO: update these to hashmaps or something better later!
-    Object *env = (Object *)calloc(1, sizeof(Object));
-    env->type = OBJECT_NIL;
-    env->value.nil = NULL;
+    // TODO: maybe add pool into Env struct?
+    Env *env = (Env *)calloc(1, sizeof(Env));
+    env->vars = (Object *)calloc(1, sizeof(Object));
+    env->vars->type = OBJECT_NIL;
+    env->vars->value.nil = NULL;
+    env->funcs = (Object *)calloc(1, sizeof(Object));
+    env->funcs->type = OBJECT_NIL;
+    env->funcs->value.nil = NULL;
 
     Object *pool = (Object *)calloc(1, sizeof(Object));
-    env->type = OBJECT_NIL;
-    env->value.nil = NULL;
+    pool->type = OBJECT_NIL;
+    pool->value.nil = NULL;
 
     while (1) {
         printf(">>> "); // Print prompt
@@ -25,7 +30,7 @@ int main() {
             return 0;
         }
 
-        int error = eval(buffer, &env, &pool);
+        int error = eval(buffer, env, &pool);
         if (error) {
             return error;
         }
