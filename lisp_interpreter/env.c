@@ -6,7 +6,7 @@ Env *create_env() {
     env->vars->type = OBJECT_NIL;
     env->vars->value.nil = NULL;
     env->funcs = NULL;
-    
+
     env->size = 0;
     env->capacity = 0;
 

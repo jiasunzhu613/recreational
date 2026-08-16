@@ -74,7 +74,8 @@ Expression *build_ast(Object *obj) {
             // TODO: parse args into array of symbols
 
             def_expr->statement->defun_expr.num_args = list_len(args);
-            symbol *args_symbols = (symbol *)calloc(def_expr->statement->defun_expr.num_args, sizeof(symbol));
+            symbol *args_symbols =
+                (symbol *)calloc(def_expr->statement->defun_expr.num_args, sizeof(symbol));
             printf("DEBUG just gonna print arguments list:");
             for (int i = 0; args->type != OBJECT_NIL; i++) {
                 Object *first = args->value.pair[0];

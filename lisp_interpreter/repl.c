@@ -316,7 +316,8 @@ Object *eval_ast(Expression *exp, Env *env) {
             break;
         case EXPR_DEFUN:
             // TODO: register function into Environment?
-            // TODO: we can't evaluate the body because we need the AST expression for handling variables later on
+            // TODO: we can't evaluate the body because we need the AST expression for handling
+            // variables later on
             env_funcs_append(env, exp->statement->def_expr->statement->defun_expr);
             printf("DEBUG: size of env func table: %d\n", env->size);
             break;
@@ -347,13 +348,14 @@ Object *apply_func(Expression *call_exp, Env *env) {
             printf("DEBUG: FOUND FUNCTION IN ENV\n");
             Defun func = env->funcs[i];
 
-            // Create new environment to run function in 
+            // Create new environment to run function in
             Env *local = create_env();
 
             // Fill environment with values
             // TODO: prob need some error checking here too for args names and values
             if (func.num_args != call_exp->statement->call_expr.num_args) {
-                fprintf(stderr, "ERROR: number of arguments don't match when making function call\n");
+                fprintf(stderr,
+                        "ERROR: number of arguments don't match when making function call\n");
                 exit(1);
             }
 
@@ -364,7 +366,8 @@ Object *apply_func(Expression *call_exp, Env *env) {
                 env_put(local, key, value); // TODO: do we need smt to ensure type?
             }
 
-            env_funcs_append(local, func); // add the function itself to environment to allow for recursion?
+            env_funcs_append(
+                local, func); // add the function itself to environment to allow for recursion?
 
             return eval_ast(func.body, local);
         }
