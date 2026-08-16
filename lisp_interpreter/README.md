@@ -38,7 +38,7 @@ operations accept fixnums (integers), and predicates return `#t` or `#f`.
 
 Arguments are evaluated before a built-in function is applied. 
 
-> !NOTE
+> [!NOTE]
 > Due to lack of proper error handling for the time being, supplying an unsupported type or the wrong number of arguments currently produces no result (or just segfaults LOL)
 
 ## Sample LISP Code To Try
