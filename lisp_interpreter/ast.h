@@ -6,6 +6,15 @@
 #include "object.h"
 #include "object_helpers.h"
 
+// Primitive Function Names
+#define NIL "nil"
+#define IF "if"
+#define AND "and"
+#define OR "or"
+#define QUOTE "quote"
+#define VAL "val"
+#define DEFUN "defun"
+
 typedef Object Value;                 // Self-resolving object types
 typedef struct Expression Expression; // Expression tagged union
 typedef enum Expression_Type Expression_Type;
@@ -70,6 +79,7 @@ struct Val {
 struct Defun {
     symbol name;
     // We will create local env for functions, and we will have array of symbols for names
+    int num_args;
     symbol *args;
     Expression *body; // Will use Call object to call function
 };

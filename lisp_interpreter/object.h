@@ -4,14 +4,6 @@
 #include <stdbool.h> // for bool
 #include <stdint.h>  // for int64_t et al.
 
-// Primitive Function Names
-#define NIL "nil"
-#define IF "if"
-#define AND "and"
-#define OR "or"
-#define QUOTE "quote"
-#define VAL "val"
-
 typedef int64_t fixnum;
 typedef bool boolean; // We will use the scheme method of representing boolean values: #t,  #f
 typedef char *symbol;
@@ -19,7 +11,6 @@ typedef char *symbol;
 typedef union Object_Value Object_Value;
 typedef enum Object_Type Object_Type;
 typedef struct Object Object;
-typedef struct Function Function;
 
 enum Object_Type { // TODO: add double and string?
     OBJECT_NIL,

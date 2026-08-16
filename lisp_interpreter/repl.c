@@ -161,19 +161,6 @@ Object *builtin_eq(Expression *call_exp, Env *env) {
     return res;
 }
 
-Object *builtin_cdr(Expression *call_exp, Env *env) {
-    if (call_exp->statement->call_expr.num_args != 1) {
-        return NULL;
-    }
-
-    Object *inner_list = eval_ast(call_exp->statement->call_expr.args[0], env);
-    if (inner_list->type != OBJECT_PAIR) {
-        return NULL;
-    }
-
-    return inner_list->value.pair[1];
-}
-
 Object *builtin_car(Expression *call_exp, Env *env) {
     if (call_exp->statement->call_expr.num_args != 1) {
         return NULL;
@@ -186,6 +173,19 @@ Object *builtin_car(Expression *call_exp, Env *env) {
     }
 
     return inner_list->value.pair[0];
+}
+
+Object *builtin_cdr(Expression *call_exp, Env *env) {
+    if (call_exp->statement->call_expr.num_args != 1) {
+        return NULL;
+    }
+
+    Object *inner_list = eval_ast(call_exp->statement->call_expr.args[0], env);
+    if (inner_list->type != OBJECT_PAIR) {
+        return NULL;
+    }
+
+    return inner_list->value.pair[1];
 }
 
 Object *builtin_cons(Expression *call_exp, Env *env) {
@@ -314,7 +314,11 @@ Object *eval_ast(Expression *exp, Env *env) {
                 env_put(env, key, eval_ast(def_exp->statement->val_expr.assign_value, env));
             // TODO: check success?
             break;
-        case EXPR_DEFUN: // TODO
+        case EXPR_DEFUN:
+            // TODO: register function into Environment?
+            // TODO: we can't evaluate the body because we need the AST expression for handling variables later on
+            env_funcs_append(env, exp->statement->def_expr->statement->defun_expr);
+            printf("DEBUG: size of env func table: %d\n", env->size);
             break;
         }
         break;
@@ -325,12 +329,42 @@ Object *eval_ast(Expression *exp, Env *env) {
     return NULL;
 }
 
+// TODO: this needs to change to support functions
 Object *apply_func(Expression *call_exp, Env *env) {
     for (int i = 0; builtin[i] != NULL; i++) {
         if (strcmp(builtin[i]->name, call_exp->statement->call_expr.name) == 0) {
             printf("DEBUG: FOUND FUNCTION!!!\n");
             return builtin[i]->func(call_exp,
                                     env); // TODO: need to fix all builtin function calls!!!
+        }
+    }
+
+    // TODO; check function table?
+    printf("DEBUG: GOT INTO apply_func\n");
+    for (int i = 0; i < env->size; i++) {
+        printf("DEBUG: found name: %s, num_args: %d\n", env->funcs[i].name, env->funcs[i].num_args);
+        if (strcmp(env->funcs[i].name, call_exp->statement->call_expr.name) == 0) {
+            printf("DEBUG: FOUND FUNCTION IN ENV\n");
+            Defun func = env->funcs[i];
+
+            // Create new environment to run function in 
+            Env *local = create_env();
+
+            // Fill environment with values
+            // TODO: prob need some error checking here too for args names and values
+            if (func.num_args != call_exp->statement->call_expr.num_args) {
+                fprintf(stderr, "ERROR: number of arguments don't match when making function call\n");
+                exit(1);
+            }
+
+            for (int i = 0; i < func.num_args; i++) {
+                Object *key = obj_box(OBJECT_SYMBOL);
+                key->value.symbol = func.args[i];
+                Object *value = eval_ast(call_exp->statement->call_expr.args[i], env);
+                env_put(local, key, value); // TODO: do we need smt to ensure type?
+            }
+
+            return eval_ast(func.body, local);
         }
     }
 

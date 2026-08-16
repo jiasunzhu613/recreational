@@ -8,21 +8,7 @@
 
 #include "object.h"
 
-// Environment
-typedef struct Env Env;
-
-struct Env {
-    // for variables
-    Object *vars;
-
-    // for functions
-    Object *funcs;
-};
-
-bool env_put(Env *env, Object *key,
-             Object *value);                  // then we must create entry out of key and value
-Object *env_search(Env *env, symbol key); // returns Object* which represents the value in env
-
+Object *obj_box(Object_Type type);
 // Intern object pooling
 // TODO: try to merge intern pool and environment functions into one common interface
 // TODO: maybe change pool object too?

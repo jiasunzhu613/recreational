@@ -62,6 +62,39 @@ Expression *build_ast(Object *obj) {
             def_expr->statement->val_expr.name = name->value.symbol;
             def_expr->statement->val_expr.assign_value = build_ast(value);
             expression->statement->def_expr = def_expr;
+        } else if (strcmp(first->value.symbol, DEFUN) == 0) {
+            expression->type = EXPR_DEF;
+            Def_Expression *def_expr = (Def_Expression *)calloc(1, sizeof(Def_Expression));
+            def_expr->statement =
+                (Def_Expression_Statement *)calloc(1, sizeof(Def_Expression_Statement));
+            Object *name = list_index_get(obj, 1);
+            Object *args = list_index_get(obj, 2); // TODO: check if args is a list
+            Object *body = list_index_get(obj, 3);
+
+            // TODO: parse args into array of symbols
+
+            def_expr->statement->defun_expr.num_args = list_len(args);
+            symbol *args_symbols = (symbol *)calloc(def_expr->statement->defun_expr.num_args, sizeof(symbol));
+            printf("DEBUG just gonna print arguments list:");
+            for (int i = 0; args->type != OBJECT_NIL; i++) {
+                Object *first = args->value.pair[0];
+                if (first->type != OBJECT_SYMBOL) {
+                    fprintf(stderr, "ERROR: expected only symbols within arguments list\n");
+                    exit(1);
+                }
+
+                args_symbols[i] = first->value.symbol;
+                printf(" %s ", args_symbols[i]);
+                args = args->value.pair[1];
+            }
+            printf("\n");
+
+            // TODO: need to check types
+            def_expr->type = EXPR_DEFUN;
+            def_expr->statement->defun_expr.name = name->value.symbol;
+            def_expr->statement->defun_expr.args = args_symbols;
+            def_expr->statement->defun_expr.body = build_ast(body);
+            expression->statement->def_expr = def_expr;
         } else {
             // TODO: need to check types
             expression->type = EXPR_CALL;
@@ -71,7 +104,6 @@ Expression *build_ast(Object *obj) {
             Object *args_object = list_index(obj, 1);
 
             // Build all list elements into array of AST expressions
-
             int i;
             for (i = 0; args_object->type != OBJECT_NIL; i++) {
                 args[i] = build_ast(args_object->value.pair[0]);

@@ -7,13 +7,7 @@ int main() {
 
     // TODO: update these to hashmaps or something better later!
     // TODO: maybe add pool into Env struct?
-    Env *env = (Env *)calloc(1, sizeof(Env));
-    env->vars = (Object *)calloc(1, sizeof(Object));
-    env->vars->type = OBJECT_NIL;
-    env->vars->value.nil = NULL;
-    env->funcs = (Object *)calloc(1, sizeof(Object));
-    env->funcs->type = OBJECT_NIL;
-    env->funcs->value.nil = NULL;
+    Env *env = create_env();
 
     Object *pool = (Object *)calloc(1, sizeof(Object));
     pool->type = OBJECT_NIL;

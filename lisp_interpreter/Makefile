@@ -1,9 +1,9 @@
-FORMAT_FILES := main.c repl.c ast.c parser.c object_helpers.c
+FORMAT_FILES := main.c repl.c ast.c parser.c object_helpers.c env.c
 
 CC = gcc
 CFLAGS = -Wall -Wextra
 TARGET = main
-SRCS = repl.c ast.c parser.c object_helpers.c
+SRCS = repl.c ast.c parser.c object_helpers.c env.c
 OBJS = $(SRCS:.c=.o)
 
 .DEFAULT_GOAL := all
