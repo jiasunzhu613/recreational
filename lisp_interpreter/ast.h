@@ -64,10 +64,10 @@ struct Quote {
     Expression *value; // should this be Object*? maybe we just convert to literal directly in build_ast?
 };
 
-// Function call for closures
+// Function call for functions and closures
 struct Call {
     symbol name;
-    Expression **args; // TODO: i feel like Object * is better here...
+    Expression **args;
     int num_args;
 };
 

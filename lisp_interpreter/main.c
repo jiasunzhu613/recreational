@@ -9,6 +9,7 @@ int main() {
     // TODO: maybe add pool into Env struct?
     Env *env = create_env();
 
+    // TODO: should this be moved into env?
     Object *pool = (Object *)calloc(1, sizeof(Object));
     pool->type = OBJECT_NIL;
     pool->value.nil = NULL;

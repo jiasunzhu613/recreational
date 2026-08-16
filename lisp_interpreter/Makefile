@@ -20,6 +20,9 @@ $(TARGET): main.o $(OBJS)
 debug: main.o $(OBJS) ## Build debug.out with debug symbols
 	$(CC) $(CFLAGS) -g -o debug.out main.o $(OBJS)
 
+sanitize: main.o $(OBJS)
+	$(CC) -fsanitize=address -g -fno-omit-frame-pointer -o sanitize.out main.o $(OBJS)
+
 test: test.o $(OBJS) ## Build test.out
 	$(CC) $(CFLAGS) -o test.out test.o $(OBJS)
 
