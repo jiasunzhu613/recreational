@@ -20,6 +20,11 @@ Function *builtin[] = {&(Function){.name = "+", .func = builtin_add},
                        &(Function){.name = "car", .func = builtin_car},
                        &(Function){.name = "cons", .func = builtin_cons},
                        &(Function){.name = "eq", .func = builtin_eq},
+                       &(Function){.name = ">", .func = builtin_gt},
+                       &(Function){.name = "<", .func = builtin_lt},
+                       &(Function){.name = ">=", .func = builtin_geq},
+                       &(Function){.name = "<=", .func = builtin_leq},
+                       &(Function){.name = "eql", .func = builtin_eql},
                        NULL};
 
 // NOTE: we guarantee that the Object coming in is of list type
@@ -128,6 +133,106 @@ Object *builtin_mul(Expression *call_exp, Env *env) {
     Object *result = (Object *)calloc(1, sizeof(Object));
     result->type = OBJECT_FIXNUM;
     result->value.fixnum = res;
+
+    return result;
+}
+
+Object *builtin_gt(Expression *call_exp, Env *env) {
+    int len = call_exp->statement->call_expr.num_args;
+    if (len != 2) {
+        return NULL;
+    }
+
+    Object *element1 = eval_ast(call_exp->statement->call_expr.args[0], env);
+    Object *element2 = eval_ast(call_exp->statement->call_expr.args[1], env);
+
+    if (element1->type != OBJECT_FIXNUM || element2->type != OBJECT_FIXNUM) {
+        return NULL;
+    }
+
+    Object *result = (Object *)calloc(1, sizeof(Object));
+    result->type = OBJECT_BOOLEAN;
+    result->value.boolean = element1->value.fixnum > element2->value.fixnum;
+
+    return result;
+}
+
+Object *builtin_lt(Expression *call_exp, Env *env) {
+    int len = call_exp->statement->call_expr.num_args;
+    if (len != 2) {
+        return NULL;
+    }
+
+    Object *element1 = eval_ast(call_exp->statement->call_expr.args[0], env);
+    Object *element2 = eval_ast(call_exp->statement->call_expr.args[1], env);
+
+    if (element1->type != OBJECT_FIXNUM || element2->type != OBJECT_FIXNUM) {
+        return NULL;
+    }
+
+    Object *result = (Object *)calloc(1, sizeof(Object));
+    result->type = OBJECT_BOOLEAN;
+    result->value.boolean = element1->value.fixnum < element2->value.fixnum;
+
+    return result;
+}
+
+Object *builtin_leq(Expression *call_exp, Env *env) {
+    int len = call_exp->statement->call_expr.num_args;
+    if (len != 2) {
+        return NULL;
+    }
+
+    Object *element1 = eval_ast(call_exp->statement->call_expr.args[0], env);
+    Object *element2 = eval_ast(call_exp->statement->call_expr.args[1], env);
+
+    if (element1->type != OBJECT_FIXNUM || element2->type != OBJECT_FIXNUM) {
+        return NULL;
+    }
+
+    Object *result = (Object *)calloc(1, sizeof(Object));
+    result->type = OBJECT_BOOLEAN;
+    result->value.boolean = element1->value.fixnum <= element2->value.fixnum;
+
+    return result;
+}
+
+Object *builtin_geq(Expression *call_exp, Env *env) {
+    int len = call_exp->statement->call_expr.num_args;
+    if (len != 2) {
+        return NULL;
+    }
+
+    Object *element1 = eval_ast(call_exp->statement->call_expr.args[0], env);
+    Object *element2 = eval_ast(call_exp->statement->call_expr.args[1], env);
+
+    if (element1->type != OBJECT_FIXNUM || element2->type != OBJECT_FIXNUM) {
+        return NULL;
+    }
+
+    Object *result = (Object *)calloc(1, sizeof(Object));
+    result->type = OBJECT_BOOLEAN;
+    result->value.boolean = element1->value.fixnum >= element2->value.fixnum;
+
+    return result;
+}
+
+Object *builtin_eql(Expression *call_exp, Env *env) {
+    int len = call_exp->statement->call_expr.num_args;
+    if (len != 2) {
+        return NULL;
+    }
+
+    Object *element1 = eval_ast(call_exp->statement->call_expr.args[0], env);
+    Object *element2 = eval_ast(call_exp->statement->call_expr.args[1], env);
+
+    if (element1->type != OBJECT_FIXNUM || element2->type != OBJECT_FIXNUM) {
+        return NULL;
+    }
+
+    Object *result = (Object *)calloc(1, sizeof(Object));
+    result->type = OBJECT_BOOLEAN;
+    result->value.boolean = element1->value.fixnum == element2->value.fixnum;
 
     return result;
 }

@@ -35,9 +35,21 @@ Object *builtin_sub_neg(Expression *call_exp,
                         Env *env); // if 1 argument, return negation, else, subtract values in sequence
 Object *builtin_mul(Expression *call_exp, 
                     Env *env);
+
+// TODO: the following comparison operators currently only support fixnums 
+Object *builtin_gt(Expression *call_exp, 
+                    Env *env);
+Object *builtin_lt(Expression *call_exp, 
+                    Env *env);
+Object *builtin_leq(Expression *call_exp, 
+                    Env *env);
+Object *builtin_geq(Expression *call_exp, 
+                    Env *env);
+Object *builtin_eq(Expression *call_exp, 
+                    Env *env);
 Object *builtin_atom(Expression *call_exp, 
                      Env *env); // (atom x)
-Object *builtin_eq(Expression *call_exp,
+Object *builtin_eql(Expression *call_exp,
                    Env *env); // (eq a b) => compares if atoms are equivalent or if memory
                                   // addresses are the same
 // "Content of Address part of Register"
