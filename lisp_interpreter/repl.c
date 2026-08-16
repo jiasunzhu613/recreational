@@ -364,6 +364,8 @@ Object *apply_func(Expression *call_exp, Env *env) {
                 env_put(local, key, value); // TODO: do we need smt to ensure type?
             }
 
+            env_funcs_append(local, func); // add the function itself to environment to allow for recursion?
+
             return eval_ast(func.body, local);
         }
     }
